@@ -16,7 +16,7 @@
 
 ## 功能
 
-当前示例代码 `B站各种api.ts` 提供以下接口：
+当前入口文件 `bili-live-api.ts` 提供以下接口：
 
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
@@ -62,19 +62,24 @@ sudo apt install obs-studio
 - npm
 - 可访问 B 站接口的网络环境
 
-原始代码是单个 TypeScript 文件，仓库暂未附带 `package.json`。可以按下面的方式建立本地运行环境。
+项目使用 npm 管理依赖，并通过 `tsx` 直接运行 TypeScript 源码。首次运行请安装锁定的依赖：
 
 ```bash
-npm init -y
-npm install express axios qrcode
-npm install -D typescript tsx @types/node @types/express @types/qrcode
-npx tsx "B站各种api.ts"
+npm ci
+npm start
 ```
 
 默认监听端口为 `12345`，可通过环境变量修改：
 
 ```bash
-PORT=12345 npx tsx "B站各种api.ts"
+PORT=12345 npm start
+```
+
+开发时可使用监听模式，并在提交前运行类型检查：
+
+```bash
+npm run dev
+npm run typecheck
 ```
 
 > 示例服务没有额外的访问控制，不建议直接暴露到公网。若必须跨机器访问，应放在受信任的内网中，并通过防火墙限制来源地址。
