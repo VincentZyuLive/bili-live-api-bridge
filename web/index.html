@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Bili Live API Bridge</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="stylesheet" href="/vendor/lxgw-wenkai/lxgw-wenkai.css" />
+        <link rel="stylesheet" href="/styles.css" />
+    </head>
+    <body>
+        <div class="glow glow-left"></div>
+        <div class="glow glow-right"></div>
+
+        <main class="shell">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">BILIBILI LIVE CONTROL</p>
+                    <h1>直播控制台</h1>
+                </div>
+                <div class="topbar-actions">
+                    <span id="modeBadge" class="badge badge-muted">连接中</span>
+                    <button id="logoutButton" class="button button-ghost hidden" type="button">退出登录</button>
+                </div>
+            </header>
+
+            <section id="loginPanel" class="panel login-panel">
+                <div>
+                    <p class="eyebrow">STEP 01</p>
+                    <h2>扫码登录 B 站</h2>
+                    <p class="muted">
+                        使用哔哩哔哩手机客户端扫码。登录凭据只保存在当前服务端会话中，不写入浏览器存储。
+                    </p>
+                    <button id="loginButton" class="button button-primary" type="button">获取登录二维码</button>
+                    <p id="loginStatus" class="status-line" role="status"></p>
+                </div>
+                <div id="qrFrame" class="qr-frame qr-hidden">
+                    <img id="qrImage" alt="B 站登录二维码" />
+                </div>
+            </section>
+
+            <section id="consolePanel" class="hidden">
+                <div class="room-strip panel">
+                    <div>
+                        <span class="muted">直播间</span>
+                        <strong id="roomId">--</strong>
+                    </div>
+                    <div>
+                        <span class="muted">状态</span>
+                        <span id="liveStatus" class="badge badge-muted">未开播</span>
+                    </div>
+                    <div class="room-title-preview">
+                        <span class="muted">当前标题</span>
+                        <strong id="currentTitle">--</strong>
+                    </div>
+                    <button id="refreshButton" class="button button-ghost" type="button">刷新</button>
+                </div>
+
+                <div class="dashboard-grid">
+                    <section class="panel">
+                        <div class="section-heading">
+                            <div>
+                                <p class="eyebrow">ROOM SETTINGS</p>
+                                <h2>开播信息</h2>
+                            </div>
+                            <span class="hint">每项可独立保存</span>
+                        </div>
+
+                        <label class="field">
+                            <span>标题</span>
+                            <div class="field-row">
+                                <input id="titleInput" maxlength="80" type="text" placeholder="输入直播标题" />
+                                <button id="saveTitleButton" class="button button-secondary" type="button" disabled>更新</button>
+                            </div>
+                        </label>
+
+                        <label class="field">
+                            <span>分区</span>
+                            <div class="field-row">
+                                <select id="areaSelect"></select>
+                                <button id="saveAreaButton" class="button button-secondary" type="button" disabled>更新</button>
+                            </div>
+                        </label>
+
+                        <label class="field">
+                            <span>直播标签</span>
+                            <div class="field-row">
+                                <input id="tagsInput" type="text" placeholder="多个标签用逗号分隔" />
+                                <button id="saveTagsButton" class="button button-secondary" type="button" disabled>更新</button>
+                            </div>
+                            <small class="hint">服务端会根据当前标签自动计算新增和删除项。</small>
+                        </label>
+                    </section>
+
+                    <section class="panel action-panel">
+                        <div>
+                            <p class="eyebrow">LIVE CONTROL</p>
+                            <h2>直播操作</h2>
+                            <p class="muted">开播会先同步当前表单中的标题、分区和标签，再申请推流地址。</p>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button id="startButton" class="button button-primary button-large" type="button" disabled>开始直播</button>
+                            <button id="stopButton" class="button button-danger button-large" type="button" disabled>停止直播</button>
+                        </div>
+
+                        <div id="streamPanel" class="stream-panel hidden">
+                            <h3>推流信息</h3>
+                            <label class="copy-field">
+                                <span>服务器</span>
+                                <div>
+                                    <input id="serverUrl" readonly type="text" />
+                                    <button class="button button-ghost" data-copy="serverUrl" type="button">复制</button>
+                                </div>
+                            </label>
+                            <label class="copy-field">
+                                <span>推流密钥</span>
+                                <div>
+                                    <input id="streamKey" readonly type="password" />
+                                    <button id="toggleKeyButton" class="button button-ghost" type="button">显示</button>
+                                    <button class="button button-ghost" data-copy="streamKey" type="button">复制</button>
+                                </div>
+                            </label>
+                        </div>
+
+                        <p id="actionStatus" class="status-line" role="status"></p>
+                    </section>
+                </div>
+            </section>
+
+            <div id="toast" class="toast hidden" role="status"></div>
+        </main>
+
+        <script src="/app.js" defer></script>
+    </body>
+</html>
