@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import type { BiliAuthCredentials } from "./bili-client";
+import type { BiliAuthCredentials } from "./client";
 
 export const SESSION_COOKIE = "bili_bridge_session";
 const SESSION_FILE_VERSION = 1;

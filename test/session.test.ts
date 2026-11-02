@@ -2,8 +2,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { BiliAuthCredentials } from "../src/bili-client";
-import { SessionStore } from "../src/session-store";
+import type { BiliAuthCredentials } from "../src/client";
+import { SessionStore } from "../src/session";
 
 const tempDirs: string[] = [];
 const credentials: BiliAuthCredentials = {

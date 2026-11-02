@@ -43,7 +43,7 @@
                 <div class="room-strip panel">
                     <div>
                         <span class="muted">直播间</span>
-                        <strong id="roomId">--</strong>
+                        <input id="roomIdInput" class="room-id-input" type="text" inputmode="numeric" placeholder="输入直播间号" aria-label="直播间号" />
                     </div>
                     <div>
                         <span class="muted">状态</span>
@@ -104,6 +104,31 @@
                             <button id="stopButton" class="button button-danger button-large" type="button" disabled>停止直播</button>
                         </div>
 
+                        <section id="faceAuthPanel" class="face-auth-panel hidden" aria-live="polite">
+                            <div class="face-auth-heading">
+                                <div>
+                                    <p class="eyebrow">FACE AUTH</p>
+                                    <h3>需要 B 站人脸认证</h3>
+                                </div>
+                                <button id="faceAuthCloseButton" class="face-auth-close" type="button" aria-label="关闭人脸认证提示">×</button>
+                            </div>
+                            <p id="faceAuthMessage" class="muted">
+                                请使用账号本人的哔哩哔哩手机客户端完成官方人脸认证。
+                            </p>
+                            <div id="faceAuthQrFrame" class="face-auth-qr hidden">
+                                <img id="faceAuthQrImage" alt="B 站人脸认证二维码" />
+                            </div>
+                            <p class="face-auth-hint">扫码或打开官方页面完成认证后，回到这里重新开播。</p>
+                            <div class="face-auth-actions">
+                                <a id="faceAuthLink" class="button button-ghost hidden" href="#" target="_blank" rel="noreferrer">
+                                    打开 B 站官方认证页面
+                                </a>
+                                <button id="retryFaceAuthButton" class="button button-primary" type="button">
+                                    我已完成认证，重新开播
+                                </button>
+                            </div>
+                        </section>
+
                         <div id="streamPanel" class="stream-panel hidden">
                             <h3>推流信息</h3>
                             <label class="copy-field">
@@ -129,7 +154,7 @@
 
                 <section class="panel danmaku-panel">
                     <div>
-                        <p class="eyebrow">DANMAKU</p>
+                        <p class="eyebrow">DANMU SEND</p>
                         <h2>弹幕互动</h2>
                         <p class="muted">按 Enter 立即加入发送队列；网络请求在后台串行处理，不阻塞输入。</p>
                     </div>

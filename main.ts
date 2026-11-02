@@ -1,8 +1,8 @@
 import path from "path";
-import { BiliClient, MockBiliClient } from "./src/bili-client";
+import { BiliClient, MockBiliClient } from "./src/client";
 import { createApp } from "./src/app";
 import { parseRuntimeConfig } from "./src/config";
-import { SessionStore } from "./src/session-store";
+import { SessionStore } from "./src/session";
 
 function main(): void {
     let config;

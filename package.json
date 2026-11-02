@@ -1,6 +1,6 @@
 {
   "name": "bili-live-api-bridge",
-  "version": "4.6.0",
+  "version": "0.2.1",
   "private": true,
   "type": "commonjs",
   "description": "Unofficial Bilibili live streaming API bridge and local WebUI",
@@ -8,10 +8,10 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "tsx bili-live-api.ts",
-    "start:mock": "tsx bili-live-api.ts --mock",
-    "start:live": "tsx bili-live-api.ts --live",
-    "dev": "tsx watch bili-live-api.ts",
+    "start": "tsx main.ts",
+    "start:mock": "tsx main.ts --mock",
+    "start:live": "tsx main.ts --live",
+    "dev": "tsx watch main.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

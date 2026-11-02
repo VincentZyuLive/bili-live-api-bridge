@@ -1,11 +1,12 @@
 import {
     loadDanmakuSettings,
     normalizeDanmakuSettings,
+    normalizeRoomId,
     saveDanmakuSettings,
     shouldRetryPrefix,
     truncateToLimit,
     unicodeLength,
-} from "./danmaku-queue.js";
+} from "./queue.js";
 
 const elements = {
     modeBadge: document.querySelector("#modeBadge"),
@@ -16,7 +17,7 @@ const elements = {
     loginStatus: document.querySelector("#loginStatus"),
     qrFrame: document.querySelector("#qrFrame"),
     qrImage: document.querySelector("#qrImage"),
-    roomId: document.querySelector("#roomId"),
+    roomIdInput: document.querySelector("#roomIdInput"),
     liveStatus: document.querySelector("#liveStatus"),
     currentTitle: document.querySelector("#currentTitle"),
     refreshButton: document.querySelector("#refreshButton"),
@@ -33,6 +34,13 @@ const elements = {
     streamKey: document.querySelector("#streamKey"),
     toggleKeyButton: document.querySelector("#toggleKeyButton"),
     actionStatus: document.querySelector("#actionStatus"),
+    faceAuthPanel: document.querySelector("#faceAuthPanel"),
+    faceAuthCloseButton: document.querySelector("#faceAuthCloseButton"),
+    faceAuthMessage: document.querySelector("#faceAuthMessage"),
+    faceAuthQrFrame: document.querySelector("#faceAuthQrFrame"),
+    faceAuthQrImage: document.querySelector("#faceAuthQrImage"),
+    faceAuthLink: document.querySelector("#faceAuthLink"),
+    retryFaceAuthButton: document.querySelector("#retryFaceAuthButton"),
     danmakuForm: document.querySelector("#danmakuForm"),
     danmakuInput: document.querySelector("#danmakuInput"),
     danmakuCount: document.querySelector("#danmakuCount"),
@@ -107,6 +115,7 @@ async function request(url, options = {}) {
         error.code = data.code ?? response.status;
         error.stage = data.stage;
         error.officialAuthUrl = data.officialAuthUrl;
+        error.faceAuthQr = data.faceAuthQr;
         if (response.status === 401) showLogin();
         throw error;
     }
@@ -132,6 +141,7 @@ function showLogin() {
     state.danmakuRecent = [];
     elements.danmakuInput.value = "";
     elements.danmakuStatus.textContent = "";
+    hideFaceAuth();
     updateDanmakuControls();
     renderDanmakuRecords();
     hideQrFrame();
@@ -224,9 +234,26 @@ function liveStatusText(status) {
     return "未开播";
 }
 
+function currentRoomId() {
+    return normalizeRoomId(elements.roomIdInput.value) || state.room?.roomId || "";
+}
+
+function updateRoomActionButtons() {
+    const liveStatus = state.room?.liveStatus;
+    elements.startButton.disabled = liveStatus == null || liveStatus === 1;
+    elements.stopButton.disabled = liveStatus == null || liveStatus !== 1;
+}
+
 function renderRoom(room) {
     state.room = room;
-    elements.roomId.textContent = room.roomId;
+    const roomId = normalizeRoomId(room.roomId);
+    elements.roomIdInput.value = roomId;
+    if (state.danmakuSettings.roomId !== roomId) {
+        state.danmakuSettings = saveDanmakuSettings({
+            ...state.danmakuSettings,
+            roomId,
+        });
+    }
     elements.currentTitle.textContent = room.title || "--";
     elements.titleInput.value = room.title || "";
     elements.tagsInput.value = (room.tags || []).join(",");
@@ -235,8 +262,7 @@ function renderRoom(room) {
     elements.saveTitleButton.disabled = false;
     elements.saveAreaButton.disabled = false;
     elements.saveTagsButton.disabled = false;
-    elements.startButton.disabled = room.liveStatus === 1;
-    elements.stopButton.disabled = room.liveStatus !== 1;
+    updateRoomActionButtons();
     if (roomsPartitionsAvailable()) {
         elements.areaSelect.value = String(room.areaId);
     }
@@ -245,6 +271,7 @@ function renderRoom(room) {
 function applyDanmakuSettings() {
     elements.danmakuAutoRetry.checked = state.danmakuSettings.autoRetryPrefix;
     elements.danmakuLimit.value = String(state.danmakuSettings.limit);
+    elements.roomIdInput.value = state.danmakuSettings.roomId;
 }
 
 function syncDanmakuSettings() {
@@ -252,6 +279,7 @@ function syncDanmakuSettings() {
     state.danmakuSettings = saveDanmakuSettings(normalizeDanmakuSettings({
         autoRetryPrefix: elements.danmakuAutoRetry.checked,
         limit: rawLimit,
+        roomId: elements.roomIdInput.value,
     }));
     applyDanmakuSettings();
     updateDanmakuControls();
@@ -286,13 +314,19 @@ function danmakuStatusLabel(item) {
     }[item.status] || item.status;
 }
 
+function formatRequestError(error) {
+    const code = Number(error?.code);
+    const message = error?.message || "请求失败";
+    return Number.isFinite(code) && code !== 0 ? `${message}（code ${code}）` : message;
+}
+
 function formatDanmakuError(error) {
     const code = Number(error?.code);
     if (String(error?.message || "").toLowerCase() === "f") return "疑似包含屏蔽词";
     if (code === 10031) return "发送频率过快";
     if (code === 1003212) return "超出 B 站长度限制";
     if (error?.stage === "local_service") return "本地服务不可用";
-    return error?.message || "发送失败";
+    return formatRequestError(error);
 }
 
 function formatTime(timestamp) {
@@ -317,6 +351,7 @@ function createDanmakuItem(text) {
         error: null,
         autoRetryPrefix: state.danmakuSettings.autoRetryPrefix,
         limit: state.danmakuSettings.limit,
+        roomId: currentRoomId(),
     };
 }
 
@@ -389,7 +424,7 @@ async function sendQueuedDanmaku(item) {
     try {
         await request("/api/danmaku/send", {
             method: "POST",
-            body: { roomId: state.room?.roomId, message: item.currentText },
+            body: { roomId: item.roomId || undefined, message: item.currentText },
         });
         item.status = "sent";
     } catch (error) {
@@ -402,7 +437,7 @@ async function sendQueuedDanmaku(item) {
             try {
                 await request("/api/danmaku/send", {
                     method: "POST",
-                    body: { roomId: state.room?.roomId, message: item.currentText },
+                    body: { roomId: item.roomId || undefined, message: item.currentText },
                 });
                 item.status = "sent";
                 item.error = null;
@@ -455,6 +490,7 @@ function enqueueDanmaku(event) {
     const message = elements.danmakuInput.value.trim();
     if (!message) return;
 
+    syncDanmakuSettings();
     const item = createDanmakuItem(message);
     state.danmakuQueue.push(item);
     elements.danmakuInput.value = "";
@@ -491,7 +527,11 @@ async function loadPartitions() {
 }
 
 async function loadRoom() {
-    const result = await request("/api/room/info", { method: "POST", body: {} });
+    const roomId = currentRoomId();
+    const result = await request("/api/room/info", {
+        method: "POST",
+        body: roomId ? { roomId } : {},
+    });
     renderRoom(result.data);
 }
 
@@ -501,13 +541,13 @@ async function enterConsole() {
         await loadRoom();
         setStatus(elements.actionStatus, "房间信息已加载", "success");
     } catch (error) {
-        setStatus(elements.actionStatus, error.message, "error");
+        setStatus(elements.actionStatus, formatRequestError(error), "error");
         if (error.officialAuthUrl) showToast("需要完成 B 站官方人脸认证", "error");
     }
 }
 
 async function saveField(field) {
-    const body = { roomId: state.room?.roomId };
+    const body = { roomId: currentRoomId() || undefined };
     if (field === "title") body.title = elements.titleInput.value;
     if (field === "area") body.partitionId = Number(elements.areaSelect.value);
     if (field === "tags") {
@@ -521,14 +561,44 @@ async function saveField(field) {
         setStatus(elements.actionStatus, "保存成功", "success");
         showToast("直播间信息已更新", "success");
     } catch (error) {
-        setStatus(elements.actionStatus, error.message, "error");
-        showToast(error.message, "error");
+        setStatus(elements.actionStatus, formatRequestError(error), "error");
+        showToast(formatRequestError(error), "error");
     }
+}
+
+function hideFaceAuth() {
+    elements.faceAuthPanel.classList.add("hidden");
+    elements.faceAuthQrFrame.classList.add("hidden");
+    elements.faceAuthQrImage.removeAttribute("src");
+    elements.faceAuthLink.classList.add("hidden");
+}
+
+function showFaceAuth(error) {
+    elements.faceAuthMessage.textContent = error.message || "本次开播需要完成 B 站官方人脸认证";
+    const qr = typeof error.faceAuthQr === "string" ? error.faceAuthQr : "";
+    if (qr.startsWith("data:image/")) {
+        elements.faceAuthQrImage.src = qr;
+        elements.faceAuthQrFrame.classList.remove("hidden");
+    } else {
+        elements.faceAuthQrImage.removeAttribute("src");
+        elements.faceAuthQrFrame.classList.add("hidden");
+    }
+
+    const authUrl = typeof error.officialAuthUrl === "string" ? error.officialAuthUrl : "";
+    if (/^https?:\/\//.test(authUrl)) {
+        elements.faceAuthLink.href = authUrl;
+        elements.faceAuthLink.classList.remove("hidden");
+    } else {
+        elements.faceAuthLink.removeAttribute("href");
+        elements.faceAuthLink.classList.add("hidden");
+    }
+    elements.faceAuthPanel.classList.remove("hidden");
+    elements.faceAuthPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 async function startStream() {
     const body = {
-        roomId: state.room?.roomId,
+        roomId: currentRoomId() || undefined,
         partitionId: Number(elements.areaSelect.value),
         title: elements.titleInput.value,
         tags: elements.tagsInput.value.split(",").map((tag) => tag.trim()).filter(Boolean),
@@ -537,6 +607,7 @@ async function startStream() {
     setStatus(elements.actionStatus, "正在同步开播信息并申请推流...");
     try {
         const result = await request("/api/start-stream", { method: "POST", body });
+        hideFaceAuth();
         elements.serverUrl.value = result.serverUrl || "";
         elements.streamKey.value = result.streamKey || "";
         elements.streamPanel.classList.remove("hidden");
@@ -544,19 +615,25 @@ async function startStream() {
         showToast("开播成功", "success");
         await loadRoom();
     } catch (error) {
-        setStatus(elements.actionStatus, error.message, "error");
-        showToast(error.message, "error");
-        if (error.officialAuthUrl) {
-            const link = document.createElement("a");
-            link.href = error.officialAuthUrl;
-            link.target = "_blank";
-            link.rel = "noreferrer";
-            link.textContent = "打开 B 站官方认证页面";
-            elements.actionStatus.append(" ", link);
+        setStatus(elements.actionStatus, formatRequestError(error), "error");
+        showToast(formatRequestError(error), "error");
+        if (error.stage === "face_auth" || [60024, 60043].includes(Number(error.code))) {
+            showFaceAuth(error);
+        } else {
+            hideFaceAuth();
         }
     } finally {
-        elements.startButton.disabled = state.room?.liveStatus === 1;
+        updateRoomActionButtons();
     }
+}
+
+async function waitForRoomOffline() {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+        await loadRoom();
+        if (state.room?.liveStatus !== 1) return true;
+        if (attempt < 3) await delay(1000);
+    }
+    return false;
 }
 
 async function stopStream() {
@@ -565,16 +642,22 @@ async function stopStream() {
     try {
         await request("/api/stop-stream", {
             method: "POST",
-            body: { roomId: state.room?.roomId },
+            body: { roomId: currentRoomId() || undefined },
         });
-        setStatus(elements.actionStatus, "已下播", "success");
-        showToast("直播已停止", "success");
-        await loadRoom();
+        const stopped = await waitForRoomOffline();
+        if (stopped) {
+            setStatus(elements.actionStatus, "已下播", "success");
+            showToast("直播已停止", "success");
+        } else {
+            const message = "下播请求成功，但 B 站仍显示直播中，请到直播中心确认";
+            setStatus(elements.actionStatus, message, "error");
+            showToast(message, "error");
+        }
     } catch (error) {
-        setStatus(elements.actionStatus, error.message, "error");
-        showToast(error.message, "error");
+        setStatus(elements.actionStatus, formatRequestError(error), "error");
+        showToast(formatRequestError(error), "error");
     } finally {
-        elements.stopButton.disabled = state.room?.liveStatus !== 1;
+        updateRoomActionButtons();
     }
 }
 
@@ -611,10 +694,16 @@ elements.saveAreaButton.addEventListener("click", () => saveField("area"));
 elements.saveTagsButton.addEventListener("click", () => saveField("tags"));
 elements.startButton.addEventListener("click", startStream);
 elements.stopButton.addEventListener("click", stopStream);
+elements.faceAuthCloseButton.addEventListener("click", hideFaceAuth);
+elements.retryFaceAuthButton.addEventListener("click", () => {
+    hideFaceAuth();
+    void startStream();
+});
 elements.danmakuForm.addEventListener("submit", enqueueDanmaku);
 elements.danmakuInput.addEventListener("input", updateDanmakuControls);
 elements.danmakuAutoRetry.addEventListener("change", syncDanmakuSettings);
 elements.danmakuLimit.addEventListener("change", syncDanmakuSettings);
+elements.roomIdInput.addEventListener("change", syncDanmakuSettings);
 elements.danmakuInput.addEventListener("compositionstart", () => {
     state.danmakuComposing = true;
 });

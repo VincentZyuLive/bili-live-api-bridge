@@ -8,9 +8,9 @@ import {
     LiveClient,
     RoomInfo,
     RoomUpdate,
-} from "./bili-client";
+} from "./client";
 import type { RuntimeMode } from "./config";
-import { SESSION_COOKIE, SessionStore } from "./session-store";
+import { SESSION_COOKIE, SessionStore } from "./session";
 
 interface CreateAppOptions {
     client: LiveClient;
@@ -396,7 +396,9 @@ export function createApp(options: CreateAppOptions) {
             res.status(400).json({
                 code: error.code,
                 message: error.message,
+                ...(error.stage ? { stage: error.stage } : {}),
                 ...(error.officialAuthUrl ? { officialAuthUrl: error.officialAuthUrl } : {}),
+                ...(error.faceAuthQr ? { faceAuthQr: error.faceAuthQr } : {}),
             });
             return;
         }

@@ -3,7 +3,7 @@ import type { Server } from "http";
 import type { AddressInfo } from "net";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApp, diffTags, normalizeTags } from "../src/app";
-import { BiliApiError, MockBiliClient, parseProxyConfig } from "../src/bili-client";
+import { BiliApiError, MockBiliClient, parseProxyConfig } from "../src/client";
 import { parseRuntimeConfig } from "../src/config";
 
 const servers: Server[] = [];
@@ -117,6 +117,9 @@ describe("WebUI assets", () => {
         expect(index).toContain('id="danmakuForm"');
         expect(index).toContain('id="danmakuQueueList"');
         expect(index).toContain('id="danmakuAutoRetry"');
+        expect(index).toContain('id="roomIdInput"');
+        expect(index).toContain('DANMU SEND');
+        expect(index).toContain('id="faceAuthPanel"');
         expect(index).toContain('id="sendDanmakuButton"');
 
         const appResponse = await fetch(`${baseUrl}/app.js`);
@@ -386,11 +389,11 @@ describe("WebUI API", () => {
     it("returns official auth URL for face verification errors", async () => {
         class FaceAuthClient extends MockBiliClient {
             override async startStream(): Promise<never> {
-                throw new BiliApiError(
-                    60043,
-                    "本次开播需要身份验证",
-                    "https://live.bilibili.com/p/html/bilili-page-face-auth/index.html",
-                );
+                throw new BiliApiError(60024, "本次开播需要身份验证", {
+                    stage: "face_auth",
+                    officialAuthUrl: "https://live.bilibili.com/p/html/bilili-page-face-auth/index.html",
+                    faceAuthQr: "data:image/png;base64,dGVzdA==",
+                });
             }
         }
 
@@ -403,7 +406,9 @@ describe("WebUI API", () => {
         });
         const body = await readJson(response);
         expect(response.status).toBe(400);
-        expect(body.code).toBe(60043);
+        expect(body.code).toBe(60024);
+        expect(body.stage).toBe("face_auth");
         expect(body.officialAuthUrl).toContain("face-auth");
+        expect(body.faceAuthQr).toBe("data:image/png;base64,dGVzdA==");
     });
 });

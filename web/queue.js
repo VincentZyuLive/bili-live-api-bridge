@@ -2,7 +2,13 @@ export const DANMAKU_SETTINGS_KEY = "bili-bridge-danmaku-settings";
 export const DEFAULT_DANMAKU_SETTINGS = Object.freeze({
     autoRetryPrefix: true,
     limit: 25,
+    roomId: "",
 });
+
+export function normalizeRoomId(value) {
+    const roomId = String(value ?? "").trim();
+    return /^\d+$/.test(roomId) ? roomId : "";
+}
 
 export function unicodeLength(value) {
     return Array.from(value).length;
@@ -23,6 +29,7 @@ export function normalizeDanmakuSettings(value) {
             ? value.autoRetryPrefix
             : DEFAULT_DANMAKU_SETTINGS.autoRetryPrefix,
         limit,
+        roomId: normalizeRoomId(value?.roomId),
     };
 }
 

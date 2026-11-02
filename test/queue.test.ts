@@ -3,11 +3,12 @@ import {
     DEFAULT_DANMAKU_SETTINGS,
     loadDanmakuSettings,
     normalizeDanmakuSettings,
+    normalizeRoomId,
     saveDanmakuSettings,
     shouldRetryPrefix,
     truncateToLimit,
     unicodeLength,
-} from "../web/danmaku-queue.js";
+} from "../web/queue.js";
 
 function memoryStorage(initial?: string) {
     let value = initial ?? null;
@@ -24,6 +25,7 @@ describe("danmaku queue helpers", () => {
         expect(DEFAULT_DANMAKU_SETTINGS).toEqual({
             autoRetryPrefix: true,
             limit: 25,
+            roomId: "",
         });
     });
 
@@ -37,24 +39,35 @@ describe("danmaku queue helpers", () => {
         expect(normalizeDanmakuSettings({ limit: 0, autoRetryPrefix: false })).toEqual({
             autoRetryPrefix: false,
             limit: 25,
+            roomId: "",
         });
-        expect(normalizeDanmakuSettings({ limit: 80 })).toEqual({
+        expect(normalizeDanmakuSettings({ limit: 80, roomId: "5861873" })).toEqual({
             autoRetryPrefix: true,
             limit: 80,
+            roomId: "5861873",
         });
     });
 
     it("loads and saves settings through storage", () => {
         const storage = memoryStorage();
         expect(loadDanmakuSettings(storage)).toEqual(DEFAULT_DANMAKU_SETTINGS);
-        expect(saveDanmakuSettings({ limit: 40, autoRetryPrefix: false }, storage)).toEqual({
+        expect(saveDanmakuSettings({ limit: 40, autoRetryPrefix: false, roomId: "5861873" }, storage)).toEqual({
             autoRetryPrefix: false,
             limit: 40,
+            roomId: "5861873",
         });
         expect(loadDanmakuSettings(storage)).toEqual({
             autoRetryPrefix: false,
             limit: 40,
+            roomId: "5861873",
         });
+    });
+
+    it("normalizes manual room IDs", () => {
+        expect(normalizeRoomId("5861873")).toBe("5861873");
+        expect(normalizeRoomId(" 5861873 ")).toBe("5861873");
+        expect(normalizeRoomId("abc")).toBe("");
+        expect(normalizeRoomId("")).toBe("");
     });
 
     it("retries the prefix only once on code 1003212", () => {

@@ -79,14 +79,27 @@ export interface LiveClient {
     sendDanmaku(credentials: BiliAuthCredentials, roomId: string, message: string): Promise<void>;
 }
 
+export interface BiliApiErrorOptions {
+    officialAuthUrl?: string;
+    faceAuthQr?: string;
+    stage?: string;
+}
+
 export class BiliApiError extends Error {
+    readonly officialAuthUrl?: string;
+    readonly faceAuthQr?: string;
+    readonly stage?: string;
+
     constructor(
         public readonly code: number | string,
         message: string,
-        public readonly officialAuthUrl?: string,
+        options: BiliApiErrorOptions = {},
     ) {
         super(message);
         this.name = "BiliApiError";
+        this.officialAuthUrl = options.officialAuthUrl;
+        this.faceAuthQr = options.faceAuthQr;
+        this.stage = options.stage;
     }
 }
 
@@ -173,13 +186,21 @@ export function parseProxyConfig(proxyUrl = process.env.BILI_PROXY_URL): AxiosPr
     return config;
 }
 
-function operationError(code: number | string, message: string): BiliApiError {
+function operationError(
+    code: number | string,
+    message: string,
+    options: BiliApiErrorOptions = {},
+): BiliApiError {
     const numericCode = typeof code === "number" ? code : Number(code);
-    return new BiliApiError(
-        code,
-        message || "Bilibili request failed",
-        AUTH_ERROR_CODES.has(numericCode) ? FACE_AUTH_URL : undefined,
-    );
+    return new BiliApiError(code, message || "Bilibili request failed", {
+        ...options,
+        ...(AUTH_ERROR_CODES.has(numericCode) && !options.officialAuthUrl
+            ? { officialAuthUrl: FACE_AUTH_URL }
+            : {}),
+        ...(AUTH_ERROR_CODES.has(numericCode) && !options.stage
+            ? { stage: "face_auth" }
+            : {}),
+    });
 }
 
 export class BiliClient implements LiveClient {
@@ -365,8 +386,31 @@ export class BiliClient implements LiveClient {
             undefined,
             { headers: { ...BILI_API_HEADERS, Cookie: cookieFor(credentials) } },
         );
-        if (response.data?.code !== 0) {
-            throw operationError(response.data?.code, response.data?.message);
+        const code = Number(response.data?.code);
+        if (code !== 0) {
+            const message = String(
+                response.data?.message || response.data?.msg || "Failed to start live stream",
+            );
+            if (code === 60024 || code === 60043) {
+                const rawQr = response.data?.data?.qr;
+                let faceAuthQr: string | undefined;
+                if (typeof rawQr === "string" && rawQr.trim()) {
+                    try {
+                        faceAuthQr = await qrcode.toDataURL(rawQr);
+                    } catch {
+                        faceAuthQr = undefined;
+                    }
+                }
+                const officialAuthUrl = code === 60043
+                    ? `https://www.bilibili.com/blackboard/live/face-auth-middle.html?source_event=400&mid=${encodeURIComponent(credentials.DedeUserID)}`
+                    : FACE_AUTH_URL;
+                throw operationError(code, message, {
+                    stage: "face_auth",
+                    officialAuthUrl,
+                    faceAuthQr,
+                });
+            }
+            throw operationError(code, message);
         }
         const rtmp = response.data?.data?.rtmp;
         if (!rtmp?.addr || !rtmp?.code) {
@@ -422,13 +466,18 @@ export class BiliClient implements LiveClient {
             },
         });
         const code = Number(response.data?.code);
-        const rejection = String(response.data?.msg || "").trim();
+        const rawMessage = String(response.data?.msg || "").trim();
         const responseMessage = String(response.data?.message || "").trim();
-        if (code !== 0 || rejection) {
+        const normalizedMessage = rawMessage.toLowerCase();
+        const successfulMessages = new Set(["", "ok", "0", "success", "发送成功"]);
+        if (code !== 0) {
             throw operationError(
                 Number.isFinite(code) ? code : -1,
-                rejection || responseMessage || "Failed to send danmaku",
+                rawMessage || responseMessage || "Failed to send danmaku",
             );
+        }
+        if (!successfulMessages.has(normalizedMessage)) {
+            throw operationError(0, rawMessage || responseMessage || "Danmaku was rejected");
         }
     }
 }
