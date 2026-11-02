@@ -51,13 +51,19 @@ npm start -- --mock
 npm start -- --live
 ```
 
+如果本机访问 B 站需要代理，只让服务端请求走代理即可：
+
+```bash
+BILI_PROXY_URL=http://127.0.0.1:7890 npm start -- --live
+```
+
 不传模式参数时默认使用 `--live`。默认访问地址：
 
 ```text
 http://127.0.0.1:61611
 ```
 
-WebUI 和 API 默认只监听本机。可通过环境变量或参数修改：
+WebUI 和 API 默认只监听本机。浏览器无法连接本地服务与本地服务无法连接 B 站会显示不同的错误提示。可通过环境变量或参数修改监听地址：
 
 ```bash
 PORT=62000 HOST=0.0.0.0 npm start -- --live
@@ -174,6 +180,13 @@ message: 本次开播需要身份验证，请在关播时点击开播唤起人�
 2. 不要把 `SESSDATA`、`v_voucher` 或认证链接交给第三方。
 3. 不要尝试伪造摄像头、替代认证主体或绕过风控。
 4. 认证完成后重新登录或重新发起开播请求。
+
+## 网络与代理
+
+- 浏览器显示 `NetworkError` 且无法访问 61611 时，通常是本地服务没有启动。
+- 本地服务正常但访问 B 站失败时，`/api/login/qrcode` 会返回 HTTP `502` 和 `stage: "bilibili_network"`。
+- 可通过 `BILI_PROXY_URL` 为服务端 B 站请求配置 HTTP/HTTPS 代理。
+- `/api/health` 的 `upstreamProxy` 字段会显示当前是 `direct` 还是 `configured`。
 
 ## 本地验证
 

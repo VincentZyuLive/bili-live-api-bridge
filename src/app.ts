@@ -1,3 +1,4 @@
+import axios from "axios";
 import crypto from "crypto";
 import express, { NextFunction, Request, Response } from "express";
 import path from "path";
@@ -202,7 +203,12 @@ export function createApp(options: CreateAppOptions) {
     app.use(express.static(webDir, { extensions: ["html"] }));
 
     app.get("/api/health", (_req, res) => {
-        res.json({ ok: true, mode, port: Number(process.env.PORT || 61611) });
+        res.json({
+            ok: true,
+            mode,
+            port: Number(process.env.PORT || 61611),
+            upstreamProxy: process.env.BILI_PROXY_URL ? "configured" : "direct",
+        });
     });
 
     app.get(
@@ -367,6 +373,15 @@ export function createApp(options: CreateAppOptions) {
                 code: error.code,
                 message: error.message,
                 ...(error.officialAuthUrl ? { officialAuthUrl: error.officialAuthUrl } : {}),
+            });
+            return;
+        }
+        if (axios.isAxiosError(error)) {
+            console.error("Bilibili upstream request failed:", error.code || error.message);
+            res.status(502).json({
+                code: 502,
+                stage: "bilibili_network",
+                message: "连接 B 站失败，请检查网络或 BILI_PROXY_URL",
             });
             return;
         }

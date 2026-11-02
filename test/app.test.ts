@@ -3,7 +3,7 @@ import type { Server } from "http";
 import type { AddressInfo } from "net";
 import { afterEach, describe, expect, it } from "vitest";
 import { createApp, diffTags, normalizeTags } from "../src/app";
-import { BiliApiError, MockBiliClient } from "../src/bili-client";
+import { BiliApiError, MockBiliClient, parseProxyConfig } from "../src/bili-client";
 import { parseRuntimeConfig } from "../src/config";
 
 const servers: Server[] = [];
@@ -59,6 +59,15 @@ describe("config", () => {
             host: "0.0.0.0",
             port: 62000,
         });
+    });
+
+    it("parses the optional Bilibili proxy URL", () => {
+        expect(parseProxyConfig("http://127.0.0.1:7890")).toEqual({
+            protocol: "http",
+            host: "127.0.0.1",
+            port: 7890,
+        });
+        expect(parseProxyConfig("")).toBeUndefined();
     });
 });
 
@@ -220,6 +229,30 @@ describe("WebUI API", () => {
             body: "{}",
         });
         expect((await readJson(offlineInfo)).data.liveStatus).toBe(0);
+    });
+
+    it("returns a structured upstream network error", async () => {
+        class NetworkFailClient extends MockBiliClient {
+            override async beginLogin(): Promise<never> {
+                const error = new Error("Network Error") as Error & {
+                    isAxiosError: boolean;
+                    code: string;
+                };
+                error.isAxiosError = true;
+                error.code = "ERR_NETWORK";
+                throw error;
+            }
+        }
+
+        const baseUrl = await startServer(new NetworkFailClient());
+        const response = await fetch(`${baseUrl}/api/login/qrcode`);
+        const body = await readJson(response);
+        expect(response.status).toBe(502);
+        expect(body).toEqual({
+            code: 502,
+            stage: "bilibili_network",
+            message: "连接 B 站失败，请检查网络或 BILI_PROXY_URL",
+        });
     });
 
     it("returns official auth URL for face verification errors", async () => {

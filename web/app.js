@@ -59,7 +59,14 @@ async function request(url, options = {}) {
         config.body = JSON.stringify(options.body);
     }
 
-    const response = await fetch(url, config);
+    let response;
+    try {
+        response = await fetch(url, config);
+    } catch {
+        const error = new Error("无法连接本地服务，请确认已运行 npm start -- --live");
+        error.stage = "local_service";
+        throw error;
+    }
     const text = await response.text();
     let data = {};
     if (text) {
@@ -72,6 +79,7 @@ async function request(url, options = {}) {
     if (!response.ok) {
         const error = new Error(data.message || `HTTP ${response.status}`);
         error.code = data.code || response.status;
+        error.stage = data.stage;
         error.officialAuthUrl = data.officialAuthUrl;
         if (response.status === 401) showLogin();
         throw error;
@@ -122,7 +130,10 @@ async function login() {
         setStatus(elements.loginStatus, "请使用哔哩哔哩手机客户端扫码");
         pollLogin(challenge.token);
     } catch (error) {
-        setStatus(elements.loginStatus, error.message, "error");
+        const message = error.stage === "bilibili_network"
+            ? "本地服务已启动，但连接 B 站失败。请检查网络或 BILI_PROXY_URL。"
+            : error.message;
+        setStatus(elements.loginStatus, message, "error");
     } finally {
         elements.loginButton.disabled = false;
     }

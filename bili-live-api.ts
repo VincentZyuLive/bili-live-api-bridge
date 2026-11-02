@@ -13,7 +13,15 @@ function main(): void {
         return;
     }
 
-    const client = config.mode === "mock" ? new MockBiliClient() : new BiliClient();
+    let client;
+    try {
+        client = config.mode === "mock" ? new MockBiliClient() : new BiliClient();
+    } catch (error) {
+        console.error(error instanceof Error ? error.message : error);
+        process.exitCode = 1;
+        return;
+    }
+
     const app = createApp({ client, mode: config.mode });
     const server = app.listen(config.port, config.host, () => {
         console.log(`Bilibili Live API Bridge (${config.mode})`);

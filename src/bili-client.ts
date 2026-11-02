@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from "axios";
+import axios, { AxiosInstance, AxiosProxyConfig, AxiosRequestConfig } from "axios";
 import crypto from "crypto";
 import qrcode from "qrcode";
 import { URLSearchParams } from "url";
@@ -93,6 +93,7 @@ const APP_KEY = "aae92bc66f3edfab";
 const APP_SECRET = "af125a0d5279fd576c1b4418a3e8276d";
 const AUTH_ERROR_CODES = new Set([60024, 60043]);
 const FACE_AUTH_URL = "https://live.bilibili.com/p/html/bilili-page-face-auth/index.html";
+const REQUEST_TIMEOUT_MS = 10_000;
 
 const URLS = {
     GET_BUVID: "https://api.bilibili.com/x/web-frontend/getbuvid",
@@ -149,6 +150,27 @@ function appSign(params: Record<string, string>): Record<string, string> {
     return signed;
 }
 
+export function parseProxyConfig(proxyUrl = process.env.BILI_PROXY_URL): AxiosProxyConfig | undefined {
+    if (!proxyUrl) return undefined;
+    const parsed = new URL(proxyUrl);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        throw new Error("BILI_PROXY_URL must use http:// or https://");
+    }
+    const defaultPort = parsed.protocol === "https:" ? 443 : 80;
+    const config: AxiosProxyConfig = {
+        protocol: parsed.protocol.slice(0, -1),
+        host: parsed.hostname,
+        port: Number(parsed.port || defaultPort),
+    };
+    if (parsed.username) {
+        config.auth = {
+            username: decodeURIComponent(parsed.username),
+            password: decodeURIComponent(parsed.password),
+        };
+    }
+    return config;
+}
+
 function operationError(code: number | string, message: string): BiliApiError {
     const numericCode = typeof code === "number" ? code : Number(code);
     return new BiliApiError(
@@ -159,14 +181,37 @@ function operationError(code: number | string, message: string): BiliApiError {
 }
 
 export class BiliClient implements LiveClient {
-    constructor(private readonly http: AxiosInstance = axios) {}
+    private readonly proxy?: AxiosProxyConfig;
+
+    constructor(
+        private readonly http: AxiosInstance = axios,
+        proxy: AxiosProxyConfig | undefined = parseProxyConfig(),
+    ) {
+        this.proxy = proxy;
+    }
+
+    private requestOptions(config: AxiosRequestConfig = {}): AxiosRequestConfig {
+        return {
+            ...config,
+            timeout: config.timeout ?? REQUEST_TIMEOUT_MS,
+            ...(this.proxy ? { proxy: this.proxy } : {}),
+        };
+    }
+
+    private get<T = any>(url: string, config: AxiosRequestConfig = {}) {
+        return this.http.get<T>(url, this.requestOptions(config));
+    }
+
+    private post<T = any>(url: string, data?: unknown, config: AxiosRequestConfig = {}) {
+        return this.http.post<T>(url, data, this.requestOptions(config));
+    }
 
     async beginLogin(): Promise<LoginChallenge> {
-        const buvidResponse = await this.http.get(URLS.GET_BUVID, { headers: BILI_API_HEADERS });
+        const buvidResponse = await this.get(URLS.GET_BUVID, { headers: BILI_API_HEADERS });
         const buvid3 = buvidResponse.data?.data?.buvid;
         if (!buvid3) throw new Error("Failed to pre-fetch buvid3");
 
-        const response = await this.http.get(URLS.QR_GENERATE, {
+        const response = await this.get(URLS.QR_GENERATE, {
             headers: { ...BILI_API_HEADERS, Cookie: `buvid3=${buvid3}` },
         });
         const { url, qrcode_key: qrKey } = response.data?.data || {};
@@ -182,7 +227,7 @@ export class BiliClient implements LiveClient {
         const state = challenge.state as { qrKey?: string; buvid3?: string };
         if (!state?.qrKey || !state?.buvid3) throw new Error("Invalid login challenge");
 
-        const response = await this.http.get(URLS.QR_POLL, {
+        const response = await this.get(URLS.QR_POLL, {
             params: { qrcode_key: state.qrKey },
             headers: { ...BILI_API_HEADERS, Cookie: `buvid3=${state.buvid3}` },
             timeout: 5000,
@@ -209,7 +254,7 @@ export class BiliClient implements LiveClient {
     }
 
     async getPartitions(credentials: BiliAuthCredentials): Promise<PartitionGroup[]> {
-        const response = await this.http.get(URLS.GET_PARTITIONS, {
+        const response = await this.get(URLS.GET_PARTITIONS, {
             headers: { ...BILI_API_HEADERS, Cookie: cookieFor(credentials) },
             params: { show_pinyin: 1 },
         });
@@ -222,7 +267,7 @@ export class BiliClient implements LiveClient {
     async getRoomInfo(credentials: BiliAuthCredentials, roomId?: string): Promise<RoomInfo> {
         let resolvedRoomId = roomId;
         if (!resolvedRoomId) {
-            const idResponse = await this.http.get(URLS.ROOM_ID_BY_UID, {
+            const idResponse = await this.get(URLS.ROOM_ID_BY_UID, {
                 headers: { ...BILI_API_HEADERS, Cookie: cookieFor(credentials) },
                 params: { uid: credentials.DedeUserID },
             });
@@ -235,7 +280,7 @@ export class BiliClient implements LiveClient {
             resolvedRoomId = String(idResponse.data.data.room_id);
         }
 
-        const response = await this.http.get(URLS.ROOM_INFO, {
+        const response = await this.get(URLS.ROOM_INFO, {
             headers: { ...BILI_API_HEADERS, Cookie: cookieFor(credentials) },
             params: { room_id: resolvedRoomId },
         });
@@ -277,7 +322,7 @@ export class BiliClient implements LiveClient {
         if (update.addTag !== undefined) body.set("add_tag", update.addTag);
         if (update.delTag !== undefined) body.set("del_tag", update.delTag);
 
-        const response = await this.http.post(URLS.UPDATE_ROOM, body.toString(), {
+        const response = await this.post(URLS.UPDATE_ROOM, body.toString(), {
             headers: { ...BILI_API_HEADERS, Cookie: cookieFor(credentials) },
         });
         if (response.data?.code !== 0) {
@@ -292,7 +337,7 @@ export class BiliClient implements LiveClient {
     ): Promise<StartStreamData> {
         let timestamp = Math.floor(Date.now() / 1000);
         try {
-            const timeResponse = await this.http.get(URLS.SERVER_TIME, {
+            const timeResponse = await this.get(URLS.SERVER_TIME, {
                 headers: BILI_API_HEADERS,
                 timeout: 5000,
             });
@@ -313,7 +358,7 @@ export class BiliClient implements LiveClient {
             version: "7.47.0.10269",
             ts: String(timestamp),
         });
-        const response = await this.http.post(
+        const response = await this.post(
             `${URLS.START_LIVE}?${new URLSearchParams(params).toString()}`,
             undefined,
             { headers: { ...BILI_API_HEADERS, Cookie: cookieFor(credentials) } },
@@ -335,7 +380,7 @@ export class BiliClient implements LiveClient {
             csrf: credentials.bili_jct,
             csrf_token: credentials.bili_jct,
         });
-        const response = await this.http.post(URLS.STOP_LIVE, body.toString(), {
+        const response = await this.post(URLS.STOP_LIVE, body.toString(), {
             headers: { ...BILI_API_HEADERS, Cookie: cookieFor(credentials) },
         });
         if (response.data?.code !== 0) {
