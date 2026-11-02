@@ -87,6 +87,10 @@ function setMode(mode) {
 
 function showLogin() {
     state.authenticated = false;
+    state.room = null;
+    state.partitionsLoaded = false;
+    elements.areaSelect.replaceChildren();
+    elements.streamPanel.classList.add("hidden");
     elements.loginPanel.classList.remove("hidden");
     elements.consolePanel.classList.add("hidden");
     elements.logoutButton.classList.add("hidden");
@@ -135,8 +139,8 @@ async function pollLogin(token) {
             return;
         }
     } catch (error) {
-        if (error.code === 202) {
-            setStatus(elements.loginStatus, "已扫码，等待手机端确认...");
+        if (error.code === 86101) {
+            setStatus(elements.loginStatus, "等待扫码...");
         } else if (error.code === 86090) {
             setStatus(elements.loginStatus, "已扫码，等待手机端确认...");
         } else {
@@ -161,6 +165,9 @@ function renderRoom(room) {
     elements.tagsInput.value = (room.tags || []).join(",");
     elements.liveStatus.textContent = liveStatusText(room.liveStatus);
     elements.liveStatus.className = `badge ${room.liveStatus === 1 ? "badge-live" : "badge-muted"}`;
+    elements.saveTitleButton.disabled = false;
+    elements.saveAreaButton.disabled = false;
+    elements.saveTagsButton.disabled = false;
     elements.startButton.disabled = room.liveStatus === 1;
     elements.stopButton.disabled = room.liveStatus !== 1;
     if (roomsPartitionsAvailable()) {

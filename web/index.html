@@ -68,7 +68,7 @@
                             <span>标题</span>
                             <div class="field-row">
                                 <input id="titleInput" maxlength="80" type="text" placeholder="输入直播标题" />
-                                <button id="saveTitleButton" class="button button-secondary" type="button">更新</button>
+                                <button id="saveTitleButton" class="button button-secondary" type="button" disabled>更新</button>
                             </div>
                         </label>
 
@@ -76,7 +76,7 @@
                             <span>分区</span>
                             <div class="field-row">
                                 <select id="areaSelect"></select>
-                                <button id="saveAreaButton" class="button button-secondary" type="button">更新</button>
+                                <button id="saveAreaButton" class="button button-secondary" type="button" disabled>更新</button>
                             </div>
                         </label>
 
@@ -84,7 +84,7 @@
                             <span>直播标签</span>
                             <div class="field-row">
                                 <input id="tagsInput" type="text" placeholder="多个标签用逗号分隔" />
-                                <button id="saveTagsButton" class="button button-secondary" type="button">更新</button>
+                                <button id="saveTagsButton" class="button button-secondary" type="button" disabled>更新</button>
                             </div>
                             <small class="hint">服务端会根据当前标签自动计算新增和删除项。</small>
                         </label>
@@ -98,8 +98,8 @@
                         </div>
 
                         <div class="action-buttons">
-                            <button id="startButton" class="button button-primary button-large" type="button">开始直播</button>
-                            <button id="stopButton" class="button button-danger button-large" type="button">停止直播</button>
+                            <button id="startButton" class="button button-primary button-large" type="button" disabled>开始直播</button>
+                            <button id="stopButton" class="button button-danger button-large" type="button" disabled>停止直播</button>
                         </div>
 
                         <div id="streamPanel" class="stream-panel hidden">

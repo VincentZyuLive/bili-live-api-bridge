@@ -127,6 +127,35 @@ describe("WebUI API", () => {
         expect(updated.data.tags).toEqual(["WebUI", "直播"]);
     });
 
+    it("accepts legacy body credentials without a session cookie", async () => {
+        const baseUrl = await startServer();
+        const response = await fetch(`${baseUrl}/api/room/info`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                SESSDATA: "legacy-sessdata",
+                bili_jct: "legacy-jct",
+                DedeUserID: "10001",
+                buvid3: "legacy-buvid3",
+            }),
+        });
+        expect(response.status).toBe(200);
+        expect((await readJson(response)).data.roomId).toBe("10001");
+    });
+
+    it("rejects partition IDs outside the live partition list", async () => {
+        const baseUrl = await startServer();
+        const cookie = await login(baseUrl);
+        const response = await fetch(`${baseUrl}/api/room/update`, {
+            method: "POST",
+            headers: { Cookie: cookie, "Content-Type": "application/json" },
+            body: JSON.stringify({ partitionId: 999999 }),
+        });
+        const body = await readJson(response);
+        expect(response.status).toBe(400);
+        expect(body.message).toContain("partition list");
+    });
+
     it("starts and stops a mock live stream", async () => {
         const baseUrl = await startServer();
         const cookie = await login(baseUrl);

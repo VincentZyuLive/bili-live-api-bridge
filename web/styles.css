@@ -204,6 +204,7 @@ h2 {
 
 .button {
     border: 0;
+    white-space: nowrap;
     border-radius: 11px;
     padding: 10px 16px;
     color: var(--text);

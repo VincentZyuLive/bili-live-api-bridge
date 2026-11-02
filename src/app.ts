@@ -156,7 +156,14 @@ async function applyRoomUpdate(
     if (title !== undefined && title !== current.title) update.title = title;
 
     const areaId = optionalAreaId(input.partitionId);
-    if (areaId !== undefined && areaId !== current.areaId) update.areaId = areaId;
+    if (areaId !== undefined && areaId !== current.areaId) {
+        const partitions = await client.getPartitions(credentials);
+        const knownArea = partitions.some((group) =>
+            group.list.some((area) => Number(area.id) === areaId),
+        );
+        if (!knownArea) throw new HttpError(400, "partitionId is not in the live partition list");
+        update.areaId = areaId;
+    }
 
     if (input.tags !== undefined) {
         const nextTags = normalizeTags(input.tags);
