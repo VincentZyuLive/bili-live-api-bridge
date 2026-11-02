@@ -126,6 +126,30 @@
                         <p id="actionStatus" class="status-line" role="status"></p>
                     </section>
                 </div>
+
+                <section class="panel danmaku-panel">
+                    <div>
+                        <p class="eyebrow">DANMAKU</p>
+                        <h2>弹幕互动</h2>
+                        <p class="muted">使用当前登录的主播账号，在自己的直播间发送普通弹幕。</p>
+                    </div>
+                    <form id="danmakuForm" class="danmaku-form">
+                        <div class="danmaku-input-wrap">
+                            <input
+                                id="danmakuInput"
+                                type="text"
+                                aria-label="弹幕内容"
+                                autocomplete="off"
+                                placeholder="输入一条弹幕，按 Enter 发送"
+                            />
+                            <span id="danmakuCount" class="char-count">0 / 20</span>
+                        </div>
+                        <button id="sendDanmakuButton" class="button button-primary" type="submit" disabled>
+                            发送弹幕
+                        </button>
+                    </form>
+                    <p id="danmakuStatus" class="status-line" role="status"></p>
+                </section>
             </section>
 
             <div id="toast" class="toast hidden" role="status"></div>
