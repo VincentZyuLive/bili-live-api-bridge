@@ -75,6 +75,30 @@ describe("tag helpers", () => {
     });
 });
 
+describe("WebUI assets", () => {
+    it("serves bundled LXGW WenKai assets and the pink TV favicon", async () => {
+        const baseUrl = await startServer();
+
+        const cssResponse = await fetch(`${baseUrl}/vendor/lxgw-wenkai/lxgw-wenkai.css`);
+        const css = await cssResponse.text();
+        expect(cssResponse.status).toBe(200);
+        expect(css).toContain("font-family: 'LXGW WenKai'");
+
+        const fontResponse = await fetch(
+            `${baseUrl}/vendor/lxgw-wenkai/fonts/LXGWWenKai-300-000000.woff2`,
+        );
+        expect(fontResponse.status).toBe(200);
+        expect((await fontResponse.arrayBuffer()).byteLength).toBeGreaterThan(1000);
+
+        const faviconResponse = await fetch(`${baseUrl}/favicon.svg`);
+        const favicon = await faviconResponse.text();
+        expect(faviconResponse.status).toBe(200);
+        expect(faviconResponse.headers.get("content-type")).toContain("image/svg+xml");
+        expect(favicon).toContain("<svg");
+        expect(favicon.toLowerCase()).toContain("#fb7299");
+    });
+});
+
 describe("WebUI API", () => {
     it("requires authentication", async () => {
         const baseUrl = await startServer();

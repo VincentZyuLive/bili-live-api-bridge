@@ -190,10 +190,15 @@ export function createApp(options: CreateAppOptions) {
     const sessions = options.sessions || new SessionStore();
     const loginSessions = new Map<string, LoginRecord>();
     const webDir = options.webDir || path.resolve(__dirname, "../web");
+    const lxgwFontDir = path.resolve(__dirname, "../node_modules/@free-fonts/lxgw-wenkai");
     const app = express();
 
     app.disable("x-powered-by");
     app.use(express.json({ limit: "64kb" }));
+    app.use(
+        "/vendor/lxgw-wenkai",
+        express.static(lxgwFontDir, { immutable: true, maxAge: "1y" }),
+    );
     app.use(express.static(webDir, { extensions: ["html"] }));
 
     app.get("/api/health", (_req, res) => {
