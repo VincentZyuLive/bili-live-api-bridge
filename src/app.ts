@@ -135,6 +135,19 @@ function optionalAreaId(value: unknown): number | undefined {
     return areaId;
 }
 
+function normalizeDanmakuMessage(value: unknown): string {
+    if (typeof value !== "string") throw new HttpError(400, "message must be a string");
+    const message = value.trim();
+    if (!message) throw new HttpError(400, "message must not be empty");
+    if (/[\r\n\t\u0000-\u001f\u007f]/.test(message)) {
+        throw new HttpError(400, "message must be a single line without control characters");
+    }
+    if (Array.from(message).length > 20) {
+        throw new HttpError(400, "message must be at most 20 characters");
+    }
+    return message;
+}
+
 async function resolveRoomId(
     client: LiveClient,
     credentials: BiliAuthCredentials,
@@ -352,6 +365,17 @@ export function createApp(options: CreateAppOptions) {
             const { roomId } = await resolveRoomId(client, credentials, req.body?.roomId);
             await client.stopStream(credentials, roomId);
             res.json({ code: 0, message: "Live stream stopped successfully" });
+        }),
+    );
+
+    app.post(
+        "/api/danmaku/send",
+        asyncRoute(async (req, res) => {
+            const credentials = requireCredentials(req, sessions);
+            const message = normalizeDanmakuMessage(req.body?.message);
+            const { roomId } = await resolveRoomId(client, credentials, req.body?.roomId);
+            await client.sendDanmaku(credentials, roomId, message);
+            res.json({ code: 0, message: "弹幕发送成功" });
         }),
     );
 

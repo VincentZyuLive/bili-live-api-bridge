@@ -24,6 +24,11 @@ const elements = {
     streamKey: document.querySelector("#streamKey"),
     toggleKeyButton: document.querySelector("#toggleKeyButton"),
     actionStatus: document.querySelector("#actionStatus"),
+    danmakuForm: document.querySelector("#danmakuForm"),
+    danmakuInput: document.querySelector("#danmakuInput"),
+    danmakuCount: document.querySelector("#danmakuCount"),
+    sendDanmakuButton: document.querySelector("#sendDanmakuButton"),
+    danmakuStatus: document.querySelector("#danmakuStatus"),
     toast: document.querySelector("#toast"),
 };
 
@@ -34,6 +39,8 @@ const state = {
     partitionsLoaded: false,
     pollTimer: null,
     toastTimer: null,
+    danmakuSending: false,
+    danmakuComposing: false,
 };
 
 function setStatus(element, message, kind = "") {
@@ -102,6 +109,9 @@ function showLogin() {
     elements.loginPanel.classList.remove("hidden");
     elements.consolePanel.classList.add("hidden");
     elements.logoutButton.classList.add("hidden");
+    elements.danmakuInput.value = "";
+    elements.danmakuStatus.textContent = "";
+    updateDanmakuControls();
     hideQrFrame();
     stopLoginPolling();
 }
@@ -207,6 +217,46 @@ function renderRoom(room) {
     elements.stopButton.disabled = room.liveStatus !== 1;
     if (roomsPartitionsAvailable()) {
         elements.areaSelect.value = String(room.areaId);
+    }
+}
+
+function updateDanmakuControls() {
+    const message = elements.danmakuInput.value.trim();
+    const length = Array.from(message).length;
+    elements.danmakuCount.textContent = `${length} / 20`;
+    elements.danmakuCount.classList.toggle("error", length > 20);
+    elements.sendDanmakuButton.disabled =
+        !state.authenticated || state.danmakuSending || length === 0 || length > 20;
+}
+
+async function sendDanmaku(event) {
+    event.preventDefault();
+    if (state.danmakuComposing || state.danmakuSending) return;
+
+    const message = elements.danmakuInput.value.trim();
+    if (!message) return;
+    if (Array.from(message).length > 20) {
+        setStatus(elements.danmakuStatus, "弹幕不能超过 20 个字符", "error");
+        return;
+    }
+
+    state.danmakuSending = true;
+    updateDanmakuControls();
+    setStatus(elements.danmakuStatus, "正在发送...");
+    try {
+        const result = await request("/api/danmaku/send", {
+            method: "POST",
+            body: { roomId: state.room?.roomId, message },
+        });
+        elements.danmakuInput.value = "";
+        setStatus(elements.danmakuStatus, result.message || "弹幕发送成功", "success");
+        showToast("弹幕发送成功", "success");
+    } catch (error) {
+        setStatus(elements.danmakuStatus, error.message, "error");
+        showToast(error.message, "error");
+    } finally {
+        state.danmakuSending = false;
+        updateDanmakuControls();
     }
 }
 
@@ -351,6 +401,14 @@ elements.saveAreaButton.addEventListener("click", () => saveField("area"));
 elements.saveTagsButton.addEventListener("click", () => saveField("tags"));
 elements.startButton.addEventListener("click", startStream);
 elements.stopButton.addEventListener("click", stopStream);
+elements.danmakuForm.addEventListener("submit", sendDanmaku);
+elements.danmakuInput.addEventListener("input", updateDanmakuControls);
+elements.danmakuInput.addEventListener("compositionstart", () => {
+    state.danmakuComposing = true;
+});
+elements.danmakuInput.addEventListener("compositionend", () => {
+    state.danmakuComposing = false;
+});
 elements.toggleKeyButton.addEventListener("click", () => {
     const visible = elements.streamKey.type === "text";
     elements.streamKey.type = visible ? "password" : "text";

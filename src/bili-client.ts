@@ -76,6 +76,7 @@ export interface LiveClient {
         areaId: number,
     ): Promise<StartStreamData>;
     stopStream(credentials: BiliAuthCredentials, roomId: string): Promise<void>;
+    sendDanmaku(credentials: BiliAuthCredentials, roomId: string, message: string): Promise<void>;
 }
 
 export class BiliApiError extends Error {
@@ -106,6 +107,7 @@ const URLS = {
     UPDATE_ROOM: "https://api.live.bilibili.com/room/v1/Room/update",
     START_LIVE: "https://api.live.bilibili.com/room/v1/Room/startLive",
     STOP_LIVE: "https://api.live.bilibili.com/room/v1/Room/stopLive",
+    SEND_DANMAKU: "https://api.live.bilibili.com/msg/send",
 };
 
 const BILI_API_HEADERS = {
@@ -387,6 +389,48 @@ export class BiliClient implements LiveClient {
             throw operationError(response.data?.code, response.data?.message);
         }
     }
+
+    async sendDanmaku(
+        credentials: BiliAuthCredentials,
+        roomId: string,
+        message: string,
+    ): Promise<void> {
+        const body = new URLSearchParams({
+            roomid: roomId,
+            msg: message,
+            rnd: String(Math.floor(Date.now() / 1000)),
+            fontsize: "25",
+            color: "16777215",
+            mode: "1",
+            bubble: "0",
+            room_type: "0",
+            jumpfrom: "0",
+            reply_mid: "0",
+            reply_attr: "0",
+            reply_uname: "",
+            replay_dmid: "",
+            dm_type: "0",
+            statistics: JSON.stringify({ appId: 100, platform: 5 }),
+            csrf: credentials.bili_jct,
+            csrf_token: credentials.bili_jct,
+        });
+        const response = await this.post(URLS.SEND_DANMAKU, body.toString(), {
+            headers: {
+                ...BILI_API_HEADERS,
+                Cookie: cookieFor(credentials),
+                Referer: `https://live.bilibili.com/${roomId}`,
+            },
+        });
+        const code = Number(response.data?.code);
+        const rejection = String(response.data?.msg || "").trim();
+        const responseMessage = String(response.data?.message || "").trim();
+        if (code !== 0 || rejection) {
+            throw operationError(
+                Number.isFinite(code) ? code : -1,
+                rejection || responseMessage || "Failed to send danmaku",
+            );
+        }
+    }
 }
 
 const MOCK_PARTITIONS: PartitionGroup[] = [
@@ -396,6 +440,8 @@ const MOCK_PARTITIONS: PartitionGroup[] = [
 ];
 
 export class MockBiliClient implements LiveClient {
+    readonly sentDanmaku: string[] = [];
+
     private readonly room: RoomInfo = {
         roomId: "10001",
         uid: "10001",
@@ -477,5 +523,13 @@ export class MockBiliClient implements LiveClient {
 
     async stopStream(_credentials: BiliAuthCredentials, _roomId: string): Promise<void> {
         this.room.liveStatus = 0;
+    }
+
+    async sendDanmaku(
+        _credentials: BiliAuthCredentials,
+        _roomId: string,
+        message: string,
+    ): Promise<void> {
+        this.sentDanmaku.push(message);
     }
 }

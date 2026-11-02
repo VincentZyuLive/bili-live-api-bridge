@@ -384,6 +384,66 @@ h2 {
     gap: 8px;
 }
 
+.danmaku-panel {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.65fr) minmax(0, 1.35fr);
+    gap: 14px 28px;
+    align-items: center;
+    padding: 24px;
+    margin-top: 18px;
+}
+
+.danmaku-panel .muted {
+    margin-bottom: 0;
+    font-size: 0.82rem;
+}
+
+.danmaku-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.danmaku-input-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.danmaku-input-wrap input {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    outline: none;
+    padding: 13px 76px 13px 14px;
+    color: var(--text);
+    background: rgba(8, 9, 13, 0.42);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.danmaku-input-wrap input:focus {
+    border-color: rgba(251, 114, 153, 0.7);
+    box-shadow: 0 0 0 4px rgba(251, 114, 153, 0.11);
+}
+
+.char-count.error {
+    color: #ff8c97;
+}
+
+.char-count {
+    position: absolute;
+    top: 50%;
+    right: 13px;
+    color: var(--muted);
+    font-size: 0.72rem;
+    transform: translateY(-50%);
+}
+
+.danmaku-panel > .status-line {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
 .toast {
     position: fixed;
     right: 24px;
@@ -441,9 +501,18 @@ h2 {
     }
 
     .field-row,
-    .copy-field > div {
+    .copy-field > div,
+    .danmaku-form {
         align-items: stretch;
         flex-wrap: wrap;
+    }
+
+    .danmaku-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .danmaku-form > .button {
+        width: 100%;
     }
 
     .field-row input,

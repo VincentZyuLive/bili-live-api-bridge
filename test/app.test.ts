@@ -114,10 +114,14 @@ describe("WebUI assets", () => {
         const styles = await stylesResponse.text();
         expect(styles).toContain(".qr-frame.qr-hidden");
 
+        expect(index).toContain('id="danmakuForm"');
+        expect(index).toContain('id="sendDanmakuButton"');
+
         const appResponse = await fetch(`${baseUrl}/app.js`);
         const app = await appResponse.text();
         expect(app).toContain("function showQrFrame()");
         expect(app).toContain("function hideQrFrame()");
+        expect(app).toContain("async function sendDanmaku(event)");
     });
 });
 
@@ -242,6 +246,63 @@ describe("WebUI API", () => {
             body: "{}",
         });
         expect((await readJson(offlineInfo)).data.liveStatus).toBe(0);
+    });
+
+    it("sends a danmaku with the active session", async () => {
+        const client = new MockBiliClient();
+        const baseUrl = await startServer(client);
+        const cookie = await login(baseUrl);
+        const response = await fetch(`${baseUrl}/api/danmaku/send`, {
+            method: "POST",
+            headers: { Cookie: cookie, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "  测试弹幕  " }),
+        });
+        const body = await readJson(response);
+        expect(response.status).toBe(200);
+        expect(body).toEqual({ code: 0, message: "弹幕发送成功" });
+        expect(client.sentDanmaku).toEqual(["测试弹幕"]);
+    });
+
+    it("rejects invalid danmaku before calling Bilibili", async () => {
+        const baseUrl = await startServer();
+        const cookie = await login(baseUrl);
+        for (const message of ["", "   ", "喵".repeat(21), "第一行\n第二行"]) {
+            const response = await fetch(`${baseUrl}/api/danmaku/send`, {
+                method: "POST",
+                headers: { Cookie: cookie, "Content-Type": "application/json" },
+                body: JSON.stringify({ message }),
+            });
+            expect(response.status).toBe(400);
+        }
+    });
+
+    it("requires authentication for sending danmaku", async () => {
+        const baseUrl = await startServer();
+        const response = await fetch(`${baseUrl}/api/danmaku/send`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "测试" }),
+        });
+        expect(response.status).toBe(401);
+    });
+
+    it("returns Bilibili rate-limit errors for danmaku", async () => {
+        class RateLimitClient extends MockBiliClient {
+            override async sendDanmaku(): Promise<never> {
+                throw new BiliApiError(10031, "发送频率过快");
+            }
+        }
+
+        const baseUrl = await startServer(new RateLimitClient());
+        const cookie = await login(baseUrl);
+        const response = await fetch(`${baseUrl}/api/danmaku/send`, {
+            method: "POST",
+            headers: { Cookie: cookie, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "测试" }),
+        });
+        const body = await readJson(response);
+        expect(response.status).toBe(400);
+        expect(body).toEqual({ code: 10031, message: "发送频率过快" });
     });
 
     it("returns a structured upstream network error", async () => {
