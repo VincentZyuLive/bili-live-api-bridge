@@ -439,9 +439,168 @@ h2 {
     transform: translateY(-50%);
 }
 
+.danmaku-settings,
+.danmaku-monitor,
 .danmaku-panel > .status-line {
     grid-column: 1 / -1;
+}
+
+.danmaku-settings {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 2px;
+}
+
+.danmaku-check,
+.danmaku-limit {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.danmaku-check input {
+    accent-color: var(--pink);
+}
+
+.danmaku-limit input {
+    width: 76px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    outline: none;
+    padding: 7px 9px;
+    color: var(--text);
+    background: rgba(8, 9, 13, 0.42);
+    text-align: center;
+}
+
+.danmaku-limit input:focus {
+    border-color: rgba(251, 114, 153, 0.7);
+    box-shadow: 0 0 0 3px rgba(251, 114, 153, 0.11);
+}
+
+.danmaku-panel > .status-line {
+    min-height: 1.2em;
+    margin: -2px 0 0;
+}
+
+.danmaku-monitor {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.danmaku-list-card {
+    min-width: 0;
+    padding: 15px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgba(8, 9, 13, 0.27);
+}
+
+.danmaku-list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.danmaku-list-heading h3 {
     margin: 0;
+    font-size: 0.9rem;
+}
+
+.mini-count {
+    min-width: 24px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    color: var(--pink);
+    background: var(--pink-soft);
+    font-size: 0.7rem;
+    text-align: center;
+}
+
+.danmaku-list {
+    display: grid;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-color: rgba(251, 114, 153, 0.36) transparent;
+}
+
+.danmaku-empty {
+    margin: 0;
+    padding: 16px 4px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.danmaku-item {
+    display: grid;
+    gap: 6px;
+    padding: 10px 11px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.danmaku-item.is-failed {
+    border-color: rgba(255, 93, 108, 0.25);
+}
+
+.danmaku-item-text {
+    overflow: hidden;
+    color: #eef0f5;
+    font-size: 0.82rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.danmaku-item-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.68rem;
+}
+
+.danmaku-item-error {
+    overflow: hidden;
+    color: #ff9aa4;
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.danmaku-state {
+    flex: 0 0 auto;
+    padding: 2px 7px;
+    border-radius: 999px;
+    color: #cfd3de;
+    background: rgba(255, 255, 255, 0.08);
+    font-weight: 700;
+}
+
+.danmaku-state[data-state="sending"],
+.danmaku-state[data-state="retrying_prefix"] {
+    color: #ffd0de;
+    background: rgba(251, 114, 153, 0.18);
+}
+
+.danmaku-state[data-state="sent"] {
+    color: #8ff0c4;
+    background: rgba(69, 214, 160, 0.12);
+}
+
+.danmaku-state[data-state="failed"] {
+    color: #ff9aa4;
+    background: rgba(255, 93, 108, 0.13);
 }
 
 .toast {
@@ -507,12 +666,18 @@ h2 {
         flex-wrap: wrap;
     }
 
-    .danmaku-panel {
+    .danmaku-panel,
+    .danmaku-monitor {
         grid-template-columns: 1fr;
     }
 
     .danmaku-form > .button {
         width: 100%;
+    }
+
+    .danmaku-settings {
+        align-items: flex-start;
+        flex-direction: column;
     }
 
     .field-row input,

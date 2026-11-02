@@ -131,7 +131,7 @@
                     <div>
                         <p class="eyebrow">DANMAKU</p>
                         <h2>弹幕互动</h2>
-                        <p class="muted">使用当前登录的主播账号，在自己的直播间发送普通弹幕。</p>
+                        <p class="muted">按 Enter 立即加入发送队列；网络请求在后台串行处理，不阻塞输入。</p>
                     </div>
                     <form id="danmakuForm" class="danmaku-form">
                         <div class="danmaku-input-wrap">
@@ -140,21 +140,55 @@
                                 type="text"
                                 aria-label="弹幕内容"
                                 autocomplete="off"
-                                placeholder="输入一条弹幕，按 Enter 发送"
+                                placeholder="输入一条弹幕，按 Enter 加入队列"
                             />
-                            <span id="danmakuCount" class="char-count">0 / 20</span>
+                            <span id="danmakuCount" class="char-count">0 / 25</span>
                         </div>
                         <button id="sendDanmakuButton" class="button button-primary" type="submit" disabled>
-                            发送弹幕
+                            加入队列
                         </button>
                     </form>
+
+                    <div class="danmaku-settings">
+                        <label class="danmaku-check">
+                            <input id="danmakuAutoRetry" type="checkbox" checked />
+                            <span>超出上限自动重发开头部分</span>
+                        </label>
+                        <label class="danmaku-limit">
+                            <span>长度上限</span>
+                            <input id="danmakuLimit" type="number" min="1" max="1000" step="1" value="25" />
+                            <span>字</span>
+                        </label>
+                    </div>
+
                     <p id="danmakuStatus" class="status-line" role="status"></p>
+
+                    <div class="danmaku-monitor">
+                        <section class="danmaku-list-card">
+                            <div class="danmaku-list-heading">
+                                <h3>当前队列</h3>
+                                <span id="danmakuQueueCount" class="mini-count">0</span>
+                            </div>
+                            <div id="danmakuQueueList" class="danmaku-list">
+                                <p class="danmaku-empty">暂无待发送弹幕</p>
+                            </div>
+                        </section>
+                        <section class="danmaku-list-card">
+                            <div class="danmaku-list-heading">
+                                <h3>最近发送</h3>
+                                <span id="danmakuRecentCount" class="mini-count">0</span>
+                            </div>
+                            <div id="danmakuRecentList" class="danmaku-list">
+                                <p class="danmaku-empty">还没有发送记录</p>
+                            </div>
+                        </section>
+                    </div>
                 </section>
             </section>
 
             <div id="toast" class="toast hidden" role="status"></div>
         </main>
 
-        <script src="/app.js" defer></script>
+        <script type="module" src="/app.js"></script>
     </body>
 </html>

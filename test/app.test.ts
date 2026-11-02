@@ -115,13 +115,17 @@ describe("WebUI assets", () => {
         expect(styles).toContain(".qr-frame.qr-hidden");
 
         expect(index).toContain('id="danmakuForm"');
+        expect(index).toContain('id="danmakuQueueList"');
+        expect(index).toContain('id="danmakuAutoRetry"');
         expect(index).toContain('id="sendDanmakuButton"');
 
         const appResponse = await fetch(`${baseUrl}/app.js`);
         const app = await appResponse.text();
         expect(app).toContain("function showQrFrame()");
         expect(app).toContain("function hideQrFrame()");
-        expect(app).toContain("async function sendDanmaku(event)");
+        expect(app).toContain("function enqueueDanmaku(event)");
+        expect(app).toContain("function processDanmakuQueue()");
+        expect(app).toContain("shouldRetryPrefix(");
     });
 });
 
@@ -266,7 +270,7 @@ describe("WebUI API", () => {
     it("rejects invalid danmaku before calling Bilibili", async () => {
         const baseUrl = await startServer();
         const cookie = await login(baseUrl);
-        for (const message of ["", "   ", "喵".repeat(21), "第一行\n第二行"]) {
+        for (const message of ["", "   ", "喵".repeat(1001), "第一行\n第二行"]) {
             const response = await fetch(`${baseUrl}/api/danmaku/send`, {
                 method: "POST",
                 headers: { Cookie: cookie, "Content-Type": "application/json" },
@@ -274,6 +278,56 @@ describe("WebUI API", () => {
             });
             expect(response.status).toBe(400);
         }
+    });
+
+    it("accepts a danmaku longer than the old 20-character limit", async () => {
+        const client = new MockBiliClient();
+        const baseUrl = await startServer(client);
+        const cookie = await login(baseUrl);
+        const message = "测".repeat(25);
+        const response = await fetch(`${baseUrl}/api/danmaku/send`, {
+            method: "POST",
+            headers: { Cookie: cookie, "Content-Type": "application/json" },
+            body: JSON.stringify({ message }),
+        });
+        expect(response.status).toBe(200);
+        expect(client.sentDanmaku).toEqual([message]);
+    });
+
+    it("passes Bilibili over-limit errors through to the UI", async () => {
+        class OverLimitClient extends MockBiliClient {
+            override async sendDanmaku(): Promise<never> {
+                throw new BiliApiError(1003212, "超出限制长度");
+            }
+        }
+
+        const baseUrl = await startServer(new OverLimitClient());
+        const cookie = await login(baseUrl);
+        const response = await fetch(`${baseUrl}/api/danmaku/send`, {
+            method: "POST",
+            headers: { Cookie: cookie, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "超长测试" }),
+        });
+        expect(response.status).toBe(400);
+        expect(await readJson(response)).toEqual({ code: 1003212, message: "超出限制长度" });
+    });
+
+    it("marks Bilibili moderation rejection instead of success", async () => {
+        class BannedWordClient extends MockBiliClient {
+            override async sendDanmaku(): Promise<never> {
+                throw new BiliApiError(0, "f");
+            }
+        }
+
+        const baseUrl = await startServer(new BannedWordClient());
+        const cookie = await login(baseUrl);
+        const response = await fetch(`${baseUrl}/api/danmaku/send`, {
+            method: "POST",
+            headers: { Cookie: cookie, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "github" }),
+        });
+        expect(response.status).toBe(400);
+        expect(await readJson(response)).toEqual({ code: 0, message: "f" });
     });
 
     it("requires authentication for sending danmaku", async () => {

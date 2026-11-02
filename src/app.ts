@@ -142,8 +142,8 @@ function normalizeDanmakuMessage(value: unknown): string {
     if (/[\r\n\t\u0000-\u001f\u007f]/.test(message)) {
         throw new HttpError(400, "message must be a single line without control characters");
     }
-    if (Array.from(message).length > 20) {
-        throw new HttpError(400, "message must be at most 20 characters");
+    if (Array.from(message).length > 1000) {
+        throw new HttpError(400, "message must be at most 1000 characters");
     }
     return message;
 }
