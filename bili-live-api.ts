@@ -1,6 +1,8 @@
+import path from "path";
 import { BiliClient, MockBiliClient } from "./src/bili-client";
 import { createApp } from "./src/app";
 import { parseRuntimeConfig } from "./src/config";
+import { SessionStore } from "./src/session-store";
 
 function main(): void {
     let config;
@@ -22,7 +24,10 @@ function main(): void {
         return;
     }
 
-    const app = createApp({ client, mode: config.mode });
+    const sessions = config.mode === "live"
+        ? new SessionStore({ persistPath: path.resolve(__dirname, "cookie", "sessions.json") })
+        : new SessionStore();
+    const app = createApp({ client, mode: config.mode, sessions });
     const server = app.listen(config.port, config.host, () => {
         console.log(`Bilibili Live API Bridge (${config.mode})`);
         console.log(`WebUI: http://${config.host}:${config.port}`);

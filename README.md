@@ -87,9 +87,10 @@ npm start -- --live --port 62000 --host 0.0.0.0
 
 扫码登录成功后，服务端会：
 
-- 创建仅保存在内存中的登录会话。
-- 通过 `HttpOnly`、`SameSite=Strict` Cookie 关联浏览器。
-- 将登录凭据保存到 `cookie/<DedeUserID>.json`，供兼容旧流程使用。
+- 创建登录会话，并通过 `HttpOnly`、`SameSite=Strict` Cookie 关联浏览器。
+- 将未过期会话持久化到 `cookie/sessions.json`。
+- 服务重启后会从该文件恢复登录态，浏览器无需重新扫码。
+- 会话默认有效期为 12 小时；过期、换浏览器或清除浏览器 Cookie 后仍需重新扫码。
 
 WebUI 不会把 `SESSDATA`、`bili_jct` 写入 `localStorage`、URL 或页面日志。
 
@@ -253,8 +254,8 @@ npm start -- --mock
 
 - 接口参数、请求头和风控规则可能过期。
 - 开播成功不代表推流服务器已经接收画面，仍需检查 OBS 日志和直播间状态。
-- 登录会话只保存在当前服务进程内，服务重启后需要重新扫码。
-- Cookie 文件以明文 JSON 保存，仅适合个人受控环境。
+- 登录会话持久化文件默认有效期为 12 小时，过期后需要重新扫码。
+- Cookie 与会话文件以明文 JSON 保存，文件权限由程序设置为 `0600`，仅适合个人受控环境。
 
 ## 免责声明
 
