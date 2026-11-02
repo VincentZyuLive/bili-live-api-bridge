@@ -102,6 +102,7 @@ function showLogin() {
     elements.loginPanel.classList.remove("hidden");
     elements.consolePanel.classList.add("hidden");
     elements.logoutButton.classList.add("hidden");
+    hideQrFrame();
     stopLoginPolling();
 }
 
@@ -119,20 +120,38 @@ function stopLoginPolling() {
     }
 }
 
+function showQrFrame() {
+    elements.qrFrame.classList.remove("qr-hidden");
+}
+
+function hideQrFrame() {
+    elements.qrFrame.classList.add("qr-hidden");
+}
+
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function login() {
     elements.loginButton.disabled = true;
+    hideQrFrame();
     setStatus(elements.loginStatus, "正在获取二维码...");
     try {
         const challenge = await request("/api/login/qrcode");
         setMode(challenge.mode || state.mode);
-        elements.qrImage.src = challenge.qrcode;
-        elements.qrFrame.classList.remove("hidden");
+        await new Promise((resolve) => {
+            elements.qrImage.onload = resolve;
+            elements.qrImage.onerror = resolve;
+            elements.qrImage.src = challenge.qrcode;
+        });
+        showQrFrame();
         setStatus(elements.loginStatus, "请使用哔哩哔哩手机客户端扫码");
         pollLogin(challenge.token);
     } catch (error) {
         const message = error.stage === "bilibili_network"
             ? "本地服务已启动，但连接 B 站失败。请检查网络或 BILI_PROXY_URL。"
             : error.message;
+        hideQrFrame();
         setStatus(elements.loginStatus, message, "error");
     } finally {
         elements.loginButton.disabled = false;
@@ -145,6 +164,8 @@ async function pollLogin(token) {
         const result = await request(`/api/login/poll?token=${encodeURIComponent(token)}`);
         if (result.authenticated) {
             setStatus(elements.loginStatus, "登录成功", "success");
+            hideQrFrame();
+            await delay(240);
             showConsole();
             await enterConsole();
             return;
@@ -156,7 +177,10 @@ async function pollLogin(token) {
             setStatus(elements.loginStatus, "已扫码，等待手机端确认...");
         } else {
             setStatus(elements.loginStatus, error.message, "error");
-            if (error.code === 404 || error.code === 410 || error.code === 86038) return;
+            if (error.code === 404 || error.code === 410 || error.code === 86038) {
+                hideQrFrame();
+                return;
+            }
         }
     }
     state.pollTimer = setTimeout(() => pollLogin(token), 1200);

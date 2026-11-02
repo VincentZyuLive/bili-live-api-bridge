@@ -105,6 +105,19 @@ describe("WebUI assets", () => {
         expect(faviconResponse.headers.get("content-type")).toContain("image/svg+xml");
         expect(favicon).toContain("<svg");
         expect(favicon.toLowerCase()).toContain("#fb7299");
+
+        const indexResponse = await fetch(`${baseUrl}/`);
+        const index = await indexResponse.text();
+        expect(index).toContain('id="qrFrame" class="qr-frame qr-hidden"');
+
+        const stylesResponse = await fetch(`${baseUrl}/styles.css`);
+        const styles = await stylesResponse.text();
+        expect(styles).toContain(".qr-frame.qr-hidden");
+
+        const appResponse = await fetch(`${baseUrl}/app.js`);
+        const app = await appResponse.text();
+        expect(app).toContain("function showQrFrame()");
+        expect(app).toContain("function hideQrFrame()");
     });
 });
 

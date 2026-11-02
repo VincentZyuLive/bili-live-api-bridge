@@ -171,6 +171,25 @@ h2 {
     border-radius: 18px;
     background: white;
     box-shadow: 0 0 0 8px var(--pink-soft);
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    visibility: visible;
+    will-change: opacity, transform;
+    transition:
+        opacity 240ms ease,
+        transform 240ms ease,
+        visibility 0s linear 0s;
+}
+
+.qr-frame.qr-hidden {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        opacity 220ms ease,
+        transform 220ms ease,
+        visibility 0s linear 220ms;
 }
 
 .qr-frame img {
@@ -384,6 +403,13 @@ h2 {
 
 .toast.success {
     border-color: rgba(69, 214, 160, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qr-frame,
+    .qr-frame.qr-hidden {
+        transition: none;
+    }
 }
 
 @media (max-width: 780px) {
