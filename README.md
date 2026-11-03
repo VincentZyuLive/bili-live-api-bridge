@@ -90,7 +90,8 @@ npm start -- --live --port 62000 --host 0.0.0.0
 - 创建登录会话，并通过 `HttpOnly`、`SameSite=Strict` Cookie 关联浏览器。
 - 将未过期会话持久化到 `cookie/sessions.json`。
 - 服务重启后会从该文件恢复登录态，浏览器无需重新扫码。
-- 会话默认有效期为 12 小时；过期、换浏览器或清除浏览器 Cookie 后仍需重新扫码。
+- 会话采用滑动过期：空闲 7 天后失效，绝对最长 30 天；正常使用会持续续期。
+- 浏览器会话 Cookie 最长保留 30 天；超过 7 天未使用、达到 30 天、换浏览器或清除浏览器 Cookie 后仍需重新扫码。
 
 WebUI 不会把 `SESSDATA`、`bili_jct` 写入 `localStorage`、URL 或页面日志。
 

@@ -99,8 +99,25 @@ function bodyCredentials(body: unknown): BiliAuthCredentials | undefined {
     };
 }
 
+const SESSION_COOKIE_OPTIONS = {
+    httpOnly: true,
+    sameSite: "strict" as const,
+    path: "/",
+};
+
+function setSessionCookie(res: Response, sessionId: string, maxAge: number): void {
+    if (maxAge > 0) {
+        res.cookie(SESSION_COOKIE, sessionId, { ...SESSION_COOKIE_OPTIONS, maxAge });
+    } else {
+        res.clearCookie(SESSION_COOKIE, SESSION_COOKIE_OPTIONS);
+    }
+}
+
 function resolveCredentials(req: Request, sessions: SessionStore): BiliAuthCredentials | undefined {
-    return bodyCredentials(req.body) || sessions.get(cookieValue(req, SESSION_COOKIE));
+    const body = bodyCredentials(req.body);
+    if (body) return body;
+    const sessionId = cookieValue(req, SESSION_COOKIE);
+    return sessionId ? sessions.renew(sessionId)?.credentials : undefined;
 }
 
 function requireCredentials(req: Request, sessions: SessionStore): BiliAuthCredentials {
@@ -252,12 +269,7 @@ export function createApp(options: CreateAppOptions) {
             if (result.code === 0 && result.credentials) {
                 loginSessions.delete(token);
                 const sessionId = sessions.create(result.credentials);
-                res.cookie(SESSION_COOKIE, sessionId, {
-                    httpOnly: true,
-                    sameSite: "strict",
-                    path: "/",
-                    maxAge: 12 * 60 * 60 * 1000,
-                });
+                setSessionCookie(res, sessionId, sessions.getAbsoluteRemaining(sessionId) ?? 0);
                 res.json({ ...result.credentials, authenticated: true, mode });
                 return;
             }
@@ -276,17 +288,28 @@ export function createApp(options: CreateAppOptions) {
     );
 
     app.get("/api/auth/session", (req, res) => {
-        const credentials = sessions.get(cookieValue(req, SESSION_COOKIE));
+        sessions.pruneExpired();
+        const sessionId = cookieValue(req, SESSION_COOKIE);
+        const session = sessions.renew(sessionId, { forcePersist: true });
+        if (session && sessionId) {
+            setSessionCookie(
+                res,
+                sessionId,
+                Math.max(0, session.absoluteExpiresAt - Date.now()),
+            );
+        } else if (sessionId) {
+            setSessionCookie(res, sessionId, 0);
+        }
         res.json({
-            authenticated: Boolean(credentials),
-            DedeUserID: credentials?.DedeUserID || null,
+            authenticated: Boolean(session),
+            DedeUserID: session?.credentials.DedeUserID || null,
             mode,
         });
     });
 
     app.post("/api/auth/logout", (req, res) => {
         sessions.delete(cookieValue(req, SESSION_COOKIE));
-        res.clearCookie(SESSION_COOKIE, { httpOnly: true, sameSite: "strict", path: "/" });
+        setSessionCookie(res, "", 0);
         res.json({ authenticated: false });
     });
 

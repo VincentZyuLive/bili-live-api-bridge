@@ -21,16 +21,25 @@ async function readJson(response: Response) {
     return response.json() as Promise<any>;
 }
 
-async function login(baseUrl: string): Promise<string> {
+async function loginWithSetCookie(baseUrl: string): Promise<{ cookie: string; setCookie: string }> {
     const challengeResponse = await fetch(`${baseUrl}/api/login/qrcode`);
     const challenge = await readJson(challengeResponse);
     const pollResponse = await fetch(
         `${baseUrl}/api/login/poll?token=${encodeURIComponent(challenge.token)}`,
     );
     expect(pollResponse.status).toBe(200);
-    const cookie = pollResponse.headers.get("set-cookie");
-    expect(cookie).toContain("bili_bridge_session=");
-    return cookie!.split(";")[0];
+    const setCookie = pollResponse.headers.get("set-cookie");
+    expect(setCookie).toContain("bili_bridge_session=");
+    return { cookie: setCookie!.split(";")[0], setCookie: setCookie! };
+}
+
+async function login(baseUrl: string): Promise<string> {
+    return (await loginWithSetCookie(baseUrl)).cookie;
+}
+
+function cookieMaxAge(setCookie: string): number {
+    const match = /Max-Age=(\d+)/i.exec(setCookie);
+    return Number(match?.[1] || 0);
 }
 
 afterEach(async () => {
@@ -152,6 +161,20 @@ describe("WebUI API", () => {
             mode: "mock",
         });
         expect(JSON.stringify(body)).not.toContain("mock-sessdata");
+    });
+
+    it("issues a long-lived session cookie and refreshes it on session checks", async () => {
+        const baseUrl = await startServer();
+        const { cookie, setCookie } = await loginWithSetCookie(baseUrl);
+        expect(cookieMaxAge(setCookie)).toBeGreaterThan(12 * 60 * 60);
+
+        const response = await fetch(`${baseUrl}/api/auth/session`, {
+            headers: { Cookie: cookie },
+        });
+        expect(response.status).toBe(200);
+        const refreshed = response.headers.get("set-cookie");
+        expect(refreshed).toContain("bili_bridge_session=");
+        expect(cookieMaxAge(refreshed!)).toBeGreaterThan(12 * 60 * 60);
     });
 
     it("reads and updates title, area and tags", async () => {
