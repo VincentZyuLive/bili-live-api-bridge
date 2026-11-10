@@ -39,7 +39,6 @@ const elements = {
     faceAuthMessage: document.querySelector("#faceAuthMessage"),
     faceAuthQrFrame: document.querySelector("#faceAuthQrFrame"),
     faceAuthQrImage: document.querySelector("#faceAuthQrImage"),
-    faceAuthLink: document.querySelector("#faceAuthLink"),
     retryFaceAuthButton: document.querySelector("#retryFaceAuthButton"),
     danmakuForm: document.querySelector("#danmakuForm"),
     danmakuInput: document.querySelector("#danmakuInput"),
@@ -570,7 +569,6 @@ function hideFaceAuth() {
     elements.faceAuthPanel.classList.add("hidden");
     elements.faceAuthQrFrame.classList.add("hidden");
     elements.faceAuthQrImage.removeAttribute("src");
-    elements.faceAuthLink.classList.add("hidden");
 }
 
 function showFaceAuth(error) {
@@ -584,14 +582,6 @@ function showFaceAuth(error) {
         elements.faceAuthQrFrame.classList.add("hidden");
     }
 
-    const authUrl = typeof error.officialAuthUrl === "string" ? error.officialAuthUrl : "";
-    if (/^https?:\/\//.test(authUrl)) {
-        elements.faceAuthLink.href = authUrl;
-        elements.faceAuthLink.classList.remove("hidden");
-    } else {
-        elements.faceAuthLink.removeAttribute("href");
-        elements.faceAuthLink.classList.add("hidden");
-    }
     elements.faceAuthPanel.classList.remove("hidden");
     elements.faceAuthPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }

@@ -129,6 +129,10 @@ describe("WebUI assets", () => {
         expect(index).toContain('id="roomIdInput"');
         expect(index).toContain('DANMU SEND');
         expect(index).toContain('id="faceAuthPanel"');
+        expect(index).toContain('id="faceAuthQrFrame"');
+        expect(index).toContain('id="retryFaceAuthButton"');
+        expect(index).not.toContain('id="faceAuthLink"');
+        expect(index).not.toContain('打开 B 站官方认证页面');
         expect(index).toContain('id="sendDanmakuButton"');
 
         const appResponse = await fetch(`${baseUrl}/app.js`);
