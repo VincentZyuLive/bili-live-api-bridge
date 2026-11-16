@@ -128,6 +128,9 @@ describe("WebUI assets", () => {
         expect(index).toContain('id="danmakuAutoRetry"');
         expect(index).toContain('id="roomIdInput"');
         expect(index).toContain('DANMU SEND');
+        expect(index).toContain('class="github-repo-link"');
+        expect(index).toContain('https://github.com/VincentZyuLive/bili-live-api-bridge');
+        expect(index).toContain('aria-label="打开 GitHub 仓库"');
         expect(index).toContain('id="faceAuthPanel"');
         expect(index).toContain('id="faceAuthQrFrame"');
         expect(index).toContain('id="retryFaceAuthButton"');
