@@ -30,6 +30,10 @@ body {
     font-family: "LXGW WenKai", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 
+body.dialog-open {
+    overflow: hidden;
+}
+
 body::before {
     position: fixed;
     inset: 0;
@@ -376,6 +380,12 @@ h2 {
     font-weight: 700;
 }
 
+.settings-panel > .field + .field {
+    margin-top: 28px;
+    padding-top: 26px;
+    border-top: 1px solid var(--line);
+}
+
 .field-row {
     gap: 10px;
 }
@@ -423,6 +433,17 @@ h2 {
 .area-field-head {
     justify-content: space-between;
     gap: 12px;
+}
+
+.area-field-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.area-field-actions .button {
+    white-space: nowrap;
 }
 
 .area-field-title {
@@ -582,6 +603,130 @@ h2 {
     text-align: center;
     font-size: 0.8rem;
     font-weight: 500;
+}
+
+.area-dialog {
+    width: min(900px, calc(100vw - 32px));
+    height: min(760px, calc(100dvh - 64px));
+    max-width: none;
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 20px;
+    color: var(--text);
+    background: #181a23;
+    box-shadow: 0 34px 110px rgba(0, 0, 0, 0.58);
+}
+
+.area-dialog::backdrop {
+    background: rgba(5, 6, 10, 0.76);
+    backdrop-filter: blur(8px);
+}
+
+.area-dialog[open] {
+    animation: area-dialog-in 180ms ease-out;
+}
+
+.area-dialog-shell {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    height: 100%;
+    min-height: 0;
+}
+
+.area-dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 24px 26px 20px;
+    border-bottom: 1px solid var(--line);
+}
+
+.area-dialog-header h2 {
+    margin: 3px 0 4px;
+    font-size: 1.35rem;
+}
+
+.area-dialog-header .hint {
+    margin: 0;
+}
+
+.area-dialog-close {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 50%;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.07);
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.area-dialog-close:hover {
+    color: white;
+    background: rgba(251, 114, 153, 0.16);
+}
+
+.area-dialog-toolbar {
+    display: grid;
+    gap: 10px;
+    padding: 18px 26px 14px;
+    border-bottom: 1px solid var(--line);
+}
+
+.area-dialog-body {
+    display: grid;
+    min-height: 0;
+    padding: 16px 26px;
+    overflow: hidden;
+}
+
+.area-dialog-body .area-tag-wall {
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+}
+
+.area-dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 26px;
+    border-top: 1px solid var(--line);
+    background: rgba(10, 12, 18, 0.34);
+}
+
+.area-dialog-selection {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.area-dialog-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 10px;
+}
+
+@keyframes area-dialog-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .action-panel {
@@ -927,8 +1072,10 @@ h2 {
 
 @media (prefers-reduced-motion: reduce) {
     .qr-frame,
-    .qr-frame.qr-hidden {
+    .qr-frame.qr-hidden,
+    .area-dialog[open] {
         transition: none;
+        animation: none;
     }
 }
 
@@ -996,12 +1143,53 @@ h2 {
         flex-direction: column;
     }
 
+    .area-field-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+    }
+
     .area-search-count {
         align-self: flex-end;
     }
 
-    .area-tag-wall {
-        max-height: 300px;
+    .area-dialog {
+        width: calc(100vw - 20px);
+        height: calc(100dvh - 20px);
+        max-height: none;
+        border-radius: 16px;
+    }
+
+    .area-dialog-header {
+        padding: 18px;
+    }
+
+    .area-dialog-toolbar {
+        padding: 14px 18px 12px;
+    }
+
+    .area-dialog-body {
+        padding: 12px 18px;
+    }
+
+    .area-dialog-footer {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px 18px;
+    }
+
+    .area-dialog-selection {
+        white-space: normal;
+    }
+
+    .area-dialog-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .area-dialog .area-tag-wall {
+        max-height: none;
     }
 
     .action-buttons {

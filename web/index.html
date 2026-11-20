@@ -64,7 +64,7 @@
                 </div>
 
                 <div class="dashboard-grid">
-                    <section class="panel">
+                    <section class="panel settings-panel">
                         <div class="section-heading">
                             <div>
                                 <p class="eyebrow">ROOM SETTINGS</p>
@@ -77,7 +77,7 @@
                             <span>标题</span>
                             <div class="field-row">
                                 <input id="titleInput" maxlength="80" type="text" placeholder="输入直播标题" />
-                                <button id="saveTitleButton" class="button button-secondary" type="button" disabled>更新</button>
+                                <button id="saveTitleButton" class="button button-secondary" type="button" disabled>更新标题</button>
                             </div>
                         </label>
 
@@ -87,32 +87,18 @@
                                     <span>分区</span>
                                     <small id="selectedAreaSummary" class="area-selected-summary">尚未加载</small>
                                 </div>
-                                <button id="saveAreaButton" class="button button-secondary" type="button" disabled>更新</button>
+                                <div class="area-field-actions">
+                                    <button id="openAreaDialogButton" class="button button-ghost" type="button" disabled>选择分区</button>
+                                    <button id="saveAreaButton" class="button button-secondary" type="button" disabled>更新分区</button>
+                                </div>
                             </div>
-                            <div class="area-search-row">
-                                <input id="areaSearchInput" type="search" autocomplete="off" placeholder="搜索：自习室 / zixishi / zxs" aria-label="搜索直播分区" />
-                                <span id="areaSearchCount" class="area-search-count">0 个分区</span>
-                            </div>
-                            <div class="area-search-options">
-                                <label class="area-search-toggle">
-                                    <input id="areaPinyinProToggle" type="checkbox" checked />
-                                    <span>拼音增强</span>
-                                </label>
-                                <label class="area-search-toggle">
-                                    <input id="areaFuseToggle" type="checkbox" checked />
-                                    <span>模糊搜索</span>
-                                </label>
-                                <small class="hint">拼音增强会补全分组与缩写；模糊搜索支持错字和跳字匹配。</small>
-                            </div>
-                            <div id="areaTagWall" class="area-tag-wall" aria-live="polite"></div>
-                            <p id="areaEmpty" class="area-empty hidden">没有匹配的直播分区</p>
                         </div>
 
                         <label class="field">
                             <span>直播标签</span>
                             <div class="field-row">
                                 <input id="tagsInput" type="text" placeholder="多个标签用逗号分隔" />
-                                <button id="saveTagsButton" class="button button-secondary" type="button" disabled>更新</button>
+                                <button id="saveTagsButton" class="button button-secondary" type="button" disabled>更新标签</button>
                             </div>
                             <small class="hint">服务端会根据当前标签自动计算新增和删除项。</small>
                         </label>
@@ -233,6 +219,50 @@
                     </div>
                 </section>
             </section>
+
+            <dialog id="areaDialog" class="area-dialog" aria-labelledby="areaDialogTitle" aria-describedby="areaDialogHint">
+                <div class="area-dialog-shell">
+                    <header class="area-dialog-header">
+                        <div>
+                            <p class="eyebrow">PARTITION PICKER</p>
+                            <h2 id="areaDialogTitle">选择直播分区</h2>
+                            <p id="areaDialogHint" class="hint">支持中文、拼音、首字母和模糊搜索。</p>
+                        </div>
+                        <button id="closeAreaDialogButton" class="area-dialog-close" type="button" aria-label="关闭分区选择">×</button>
+                    </header>
+
+                    <div class="area-dialog-toolbar">
+                        <div class="area-search-row">
+                            <input id="areaSearchInput" type="search" autocomplete="off" placeholder="搜索：自习室 / zixishi / zxs" aria-label="搜索直播分区" />
+                            <span id="areaSearchCount" class="area-search-count">0 个分区</span>
+                        </div>
+                        <div class="area-search-options">
+                            <label class="area-search-toggle">
+                                <input id="areaPinyinProToggle" type="checkbox" checked />
+                                <span>拼音增强</span>
+                            </label>
+                            <label class="area-search-toggle">
+                                <input id="areaFuseToggle" type="checkbox" checked />
+                                <span>模糊搜索</span>
+                            </label>
+                            <small class="hint">拼音增强会补全分组与缩写；模糊搜索支持错字和跳字匹配。</small>
+                        </div>
+                    </div>
+
+                    <div class="area-dialog-body">
+                        <div id="areaTagWall" class="area-tag-wall" aria-live="polite"></div>
+                        <p id="areaEmpty" class="area-empty hidden">没有匹配的直播分区</p>
+                    </div>
+
+                    <footer class="area-dialog-footer">
+                        <span id="areaDialogSelection" class="area-dialog-selection">当前选择：尚未选择</span>
+                        <div class="area-dialog-actions">
+                            <button id="cancelAreaDialogButton" class="button button-ghost" type="button">取消</button>
+                            <button id="confirmAreaDialogButton" class="button button-primary" type="button" disabled>确认选择</button>
+                        </div>
+                    </footer>
+                </div>
+            </dialog>
 
             <div id="toast" class="toast hidden" role="status"></div>
         </main>

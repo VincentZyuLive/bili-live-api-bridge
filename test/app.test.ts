@@ -129,6 +129,7 @@ describe("WebUI assets", () => {
         const stylesResponse = await fetch(`${baseUrl}/styles.css`);
         const styles = await stylesResponse.text();
         expect(styles).toContain(".qr-frame.qr-hidden");
+        expect(styles).toContain(".area-dialog::backdrop");
 
         expect(index).toContain('id="danmakuForm"');
         expect(index).toContain('id="danmakuQueueList"');
@@ -136,6 +137,11 @@ describe("WebUI assets", () => {
         expect(index).toContain('id="roomIdInput"');
         expect(index).toContain('id="areaSearchInput"');
         expect(index).toContain('id="areaTagWall"');
+        expect(index).toContain('id="areaDialog"');
+        expect(index).toContain('id="openAreaDialogButton"');
+        expect(index).toContain('id="confirmAreaDialogButton"');
+        expect(index).toContain('id="cancelAreaDialogButton"');
+        expect(index).toContain('aria-labelledby="areaDialogTitle"');
         expect(index).toContain('id="areaPinyinProToggle"');
         expect(index).toContain('id="areaFuseToggle"');
         expect(index).toContain('id="versionBadge"');
@@ -157,6 +163,9 @@ describe("WebUI assets", () => {
         expect(app).toContain("function hideQrFrame()");
         expect(app).toContain("function enqueueDanmaku(event)");
         expect(app).toContain("function processDanmakuQueue()");
+        expect(app).toContain("function setPendingArea(");
+        expect(app).toContain("function openAreaDialog(");
+        expect(app).toContain("elements.areaDialog.showModal()");
         expect(app).toContain("shouldRetryPrefix(");
         expect(app).toContain("buildPartitionSearchDocuments(");
         expect(app).toContain("createFuseIndex(");

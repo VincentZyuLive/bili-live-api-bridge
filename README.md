@@ -17,7 +17,9 @@
 
 ## 🖼️ WebUI 预览
 
-![Bili Live API Bridge WebUI 预览](docs/images/preview/preview.webui.png)
+![Bili Live API Bridge WebUI 首页](docs/images/preview/preview.webui.home.png)
+
+![Bili Live API Bridge 分区选择弹窗](docs/images/preview/preview.webui.partition-picker.png)
 
 ## ✨ 功能
 

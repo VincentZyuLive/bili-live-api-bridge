@@ -35,6 +35,12 @@ const elements = {
     areaSearchCount: document.querySelector("#areaSearchCount"),
     areaPinyinProToggle: document.querySelector("#areaPinyinProToggle"),
     areaFuseToggle: document.querySelector("#areaFuseToggle"),
+    openAreaDialogButton: document.querySelector("#openAreaDialogButton"),
+    areaDialog: document.querySelector("#areaDialog"),
+    closeAreaDialogButton: document.querySelector("#closeAreaDialogButton"),
+    cancelAreaDialogButton: document.querySelector("#cancelAreaDialogButton"),
+    confirmAreaDialogButton: document.querySelector("#confirmAreaDialogButton"),
+    areaDialogSelection: document.querySelector("#areaDialogSelection"),
     areaTagWall: document.querySelector("#areaTagWall"),
     areaEmpty: document.querySelector("#areaEmpty"),
     selectedAreaSummary: document.querySelector("#selectedAreaSummary"),
@@ -76,6 +82,8 @@ const state = {
     partitionsLoaded: false,
     partitions: [],
     selectedAreaId: null,
+    pendingAreaId: null,
+    areaDialogOpen: false,
     areaSearchSettings: loadAreaSearchSettings(),
     areaDocuments: [],
     groupDocuments: [],
@@ -152,6 +160,7 @@ function setMode(mode) {
 }
 
 function showLogin() {
+    closeAreaDialog({ restoreFocus: false });
     state.authenticated = false;
     state.room = null;
     state.partitionsLoaded = false;
@@ -168,6 +177,9 @@ function showLogin() {
     elements.areaEmpty.classList.add("hidden");
     elements.areaSearchCount.textContent = "0 个分区";
     elements.selectedAreaSummary.textContent = "尚未加载";
+    elements.areaDialogSelection.textContent = "当前选择：尚未选择";
+    elements.confirmAreaDialogButton.disabled = true;
+    elements.openAreaDialogButton.disabled = true;
     elements.saveAreaButton.disabled = true;
     elements.streamPanel.classList.add("hidden");
     elements.loginPanel.classList.remove("hidden");
@@ -298,13 +310,14 @@ function renderRoom(room) {
     elements.saveTitleButton.disabled = false;
     elements.saveTagsButton.disabled = false;
     updateRoomActionButtons();
-    if (roomsPartitionsAvailable()) {
-        selectArea(room.areaId, { scrollIntoView: true });
+    if (roomsPartitionsAvailable() && resolveArea(room.areaId)) {
+        selectArea(room.areaId);
     } else {
         state.selectedAreaId = room.areaId;
         elements.selectedAreaSummary.textContent = `${room.parentAreaName || "分区"} / ${room.areaName || room.areaId}`;
         elements.saveAreaButton.disabled = true;
     }
+    elements.openAreaDialogButton.disabled = !roomsPartitionsAvailable();
 }
 
 function applyDanmakuSettings() {
@@ -564,35 +577,105 @@ function updateAreaSaveButton() {
         || Number(state.selectedAreaId) === Number(state.room.areaId);
 }
 
-function selectArea(areaId, options = {}) {
+function resolveArea(areaId) {
     const selectedId = Number(areaId);
-    if (!Number.isInteger(selectedId) || selectedId <= 0) return;
+    if (!Number.isInteger(selectedId) || selectedId <= 0) return null;
 
-    let selectedArea = null;
-    let selectedGroup = null;
     for (const group of state.partitions) {
         const area = (group.list || []).find((item) => Number(item.id) === selectedId);
         if (area) {
-            selectedArea = area;
-            selectedGroup = group;
-            break;
+            return { areaId: selectedId, area, group };
         }
     }
-    if (!selectedArea || !selectedGroup) return;
+    return null;
+}
 
-    state.selectedAreaId = selectedId;
+function updateAreaButtonSelection(areaId) {
+    const selectedId = Number(areaId) || null;
     for (const [id, button] of state.areaButtons) {
         const selected = id === selectedId;
         button.classList.toggle("selected", selected);
         button.setAttribute("aria-pressed", String(selected));
     }
-    elements.selectedAreaSummary.textContent = `${selectedGroup.name} / ${selectedArea.name}`;
+}
+
+function updateAreaDialogSelection() {
+    const resolved = state.pendingAreaId ? resolveArea(state.pendingAreaId) : null;
+    elements.areaDialogSelection.textContent = resolved
+        ? `当前选择：${resolved.group.name} / ${resolved.area.name}`
+        : "当前选择：尚未选择";
+    elements.confirmAreaDialogButton.disabled = !resolved;
+    return resolved;
+}
+
+function selectArea(areaId, options = {}) {
+    const resolved = resolveArea(areaId);
+    if (!resolved) return false;
+
+    state.selectedAreaId = resolved.areaId;
+    updateAreaButtonSelection(resolved.areaId);
+    elements.selectedAreaSummary.textContent = `${resolved.group.name} / ${resolved.area.name}`;
     updateAreaSaveButton();
 
     if (options.scrollIntoView) {
         window.setTimeout(() => {
-            state.areaButtons.get(selectedId)?.scrollIntoView({ block: "nearest" });
+            state.areaButtons.get(resolved.areaId)?.scrollIntoView({ block: "nearest" });
         }, 60);
+    }
+    return true;
+}
+
+function setPendingArea(areaId, options = {}) {
+    const resolved = resolveArea(areaId);
+    if (!resolved) {
+        state.pendingAreaId = null;
+        updateAreaButtonSelection(null);
+        updateAreaDialogSelection();
+        return false;
+    }
+
+    state.pendingAreaId = resolved.areaId;
+    updateAreaButtonSelection(resolved.areaId);
+    updateAreaDialogSelection();
+    if (options.scrollIntoView) {
+        window.setTimeout(() => {
+            state.areaButtons.get(resolved.areaId)?.scrollIntoView({ block: "nearest" });
+        }, 60);
+    }
+    return true;
+}
+
+function openAreaDialog() {
+    if (!roomsPartitionsAvailable()) return;
+
+    state.areaDialogOpen = true;
+    state.pendingAreaId = null;
+    elements.areaSearchInput.value = "";
+    filterAreaTags();
+    if (state.selectedAreaId) setPendingArea(state.selectedAreaId);
+    else {
+        updateAreaButtonSelection(null);
+        updateAreaDialogSelection();
+    }
+
+    if (!elements.areaDialog.open) elements.areaDialog.showModal();
+    document.body.classList.add("dialog-open");
+    window.requestAnimationFrame(() => {
+        elements.areaSearchInput.focus();
+        elements.areaSearchInput.select();
+        state.areaButtons.get(state.pendingAreaId)?.scrollIntoView({ block: "nearest" });
+    });
+}
+
+function closeAreaDialog(options = {}) {
+    if (elements.areaDialog.open) elements.areaDialog.close();
+    state.areaDialogOpen = false;
+    state.pendingAreaId = null;
+    updateAreaButtonSelection(null);
+    updateAreaDialogSelection();
+    document.body.classList.remove("dialog-open");
+    if (options.restoreFocus !== false) {
+        window.requestAnimationFrame(() => elements.openAreaDialogButton.focus());
     }
 }
 
@@ -643,6 +726,7 @@ function filterAreaTags() {
     elements.areaSearchCount.textContent = hasQuery
         ? `${visibleCount} / ${total} 个分区`
         : `${total} 个分区`;
+    elements.areaTagWall.classList.toggle("hidden", visibleCount === 0);
     elements.areaEmpty.textContent = hasQuery ? "没有匹配的直播分区" : "分区列表尚未加载";
     elements.areaEmpty.classList.toggle("hidden", visibleCount > 0);
 }
@@ -675,7 +759,7 @@ function renderPartitionTags() {
             button.textContent = area.name;
             button.title = `${group.name} / ${area.name}`;
             button.setAttribute("aria-pressed", "false");
-            button.addEventListener("click", () => selectArea(area.id));
+            button.addEventListener("click", () => setPendingArea(area.id, { scrollIntoView: true }));
             state.areaButtons.set(Number(area.id), button);
             tags.append(button);
         }
@@ -702,7 +786,13 @@ async function loadPartitions(force = false) {
     state.partitions = Array.isArray(result.data) ? result.data : [];
     state.partitionsLoaded = true;
     renderPartitionTags();
-    if (state.room) selectArea(state.room.areaId, { scrollIntoView: true });
+    elements.openAreaDialogButton.disabled = !roomsPartitionsAvailable() || !state.room;
+    const committedAreaId = state.selectedAreaId || state.room?.areaId;
+    if (committedAreaId) selectArea(committedAreaId);
+    if (state.areaDialogOpen) {
+        setPendingArea(state.pendingAreaId || state.selectedAreaId);
+        filterAreaTags();
+    }
 }
 
 async function loadRoom() {
@@ -867,6 +957,27 @@ async function init() {
 
 elements.loginButton.addEventListener("click", login);
 elements.refreshButton.addEventListener("click", () => enterConsole());
+elements.openAreaDialogButton.addEventListener("click", openAreaDialog);
+elements.closeAreaDialogButton.addEventListener("click", () => closeAreaDialog());
+elements.cancelAreaDialogButton.addEventListener("click", () => closeAreaDialog());
+elements.confirmAreaDialogButton.addEventListener("click", () => {
+    if (state.pendingAreaId) selectArea(state.pendingAreaId, { scrollIntoView: true });
+    closeAreaDialog();
+});
+elements.areaDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeAreaDialog();
+});
+elements.areaDialog.addEventListener("click", (event) => {
+    if (event.target === elements.areaDialog) closeAreaDialog();
+});
+elements.areaDialog.addEventListener("close", () => {
+    state.areaDialogOpen = false;
+    state.pendingAreaId = null;
+    updateAreaButtonSelection(null);
+    updateAreaDialogSelection();
+    document.body.classList.remove("dialog-open");
+});
 elements.areaSearchInput.addEventListener("input", filterAreaTags);
 elements.areaFuseToggle.addEventListener("change", () => {
     state.areaSearchSettings = saveAreaSearchSettings({
