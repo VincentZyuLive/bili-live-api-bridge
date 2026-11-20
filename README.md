@@ -14,6 +14,10 @@
 >
 > 本项目不提供绕过实名认证、人脸认证、风控验证或其他身份校验的能力。扫脸必须由账号本人通过 B 站官方流程完成。
 
+## 🖼️ WebUI 预览
+
+![Bili Live API Bridge WebUI 预览](docs/images/preview/preview.webui.png)
+
 ## ✨ 功能
 
 WebUI 当前支持：
