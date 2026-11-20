@@ -4,6 +4,7 @@ export interface RuntimeConfig {
     mode: RuntimeMode;
     host: string;
     port: number;
+    openBrowser: boolean;
 }
 
 function readOption(argv: string[], index: number, name: string): [string, number] {
@@ -25,6 +26,7 @@ export function parseRuntimeConfig(
     let mode: RuntimeMode = env.BILI_BRIDGE_MODE === "mock" ? "mock" : "live";
     let host = env.HOST || "127.0.0.1";
     let port = Number(env.PORT || 61611);
+    let openBrowser = env.BILI_BRIDGE_NO_OPEN !== "1";
 
     for (let index = 0; index < argv.length; index += 1) {
         const arg = argv[index];
@@ -32,6 +34,8 @@ export function parseRuntimeConfig(
             mode = "mock";
         } else if (arg === "--live") {
             mode = "live";
+        } else if (arg === "--no-open") {
+            openBrowser = false;
         } else if (arg === "--port" || arg.startsWith("--port=")) {
             const [value, nextIndex] = readOption(argv, index, "--port");
             port = Number(value);
@@ -52,5 +56,5 @@ export function parseRuntimeConfig(
         throw new Error("Host must not be empty");
     }
 
-    return { mode, host, port };
+    return { mode, host, port, openBrowser };
 }

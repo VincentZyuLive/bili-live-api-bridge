@@ -440,7 +440,7 @@ export function createApp(options: CreateAppOptions) {
             return;
         }
         if (axios.isAxiosError(error)) {
-            console.error("Bilibili upstream request failed:", error.code || error.message);
+            console.error("❌ Bilibili upstream request failed:", error.code || error.message);
             res.status(502).json({
                 code: 502,
                 stage: "bilibili_network",
@@ -448,7 +448,7 @@ export function createApp(options: CreateAppOptions) {
             });
             return;
         }
-        console.error("Unhandled request error:", error instanceof Error ? error.message : error);
+        console.error("❌ Unhandled request error:", error instanceof Error ? error.message : error);
         res.status(500).json({ code: 500, message: "Internal server error" });
     });
 

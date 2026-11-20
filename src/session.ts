@@ -180,7 +180,7 @@ export class SessionStore {
             }
         } catch (error) {
             console.warn(
-                "Unable to load persisted login sessions:",
+                "⚠️ Unable to load persisted login sessions:",
                 error instanceof Error ? error.message : error,
             );
         }
@@ -214,7 +214,7 @@ export class SessionStore {
             this.lastPersistAt = now;
         } catch (error) {
             console.warn(
-                "Unable to persist login sessions:",
+                "⚠️ Unable to persist login sessions:",
                 error instanceof Error ? error.message : error,
             );
         }

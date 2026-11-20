@@ -59,6 +59,7 @@ describe("config", () => {
             mode: "live",
             host: "127.0.0.1",
             port: 61611,
+            openBrowser: true,
         });
     });
 
@@ -67,6 +68,11 @@ describe("config", () => {
             mode: "mock",
             host: "0.0.0.0",
             port: 62000,
+            openBrowser: true,
+        });
+        expect(parseRuntimeConfig(["--no-open"], {})).toMatchObject({ openBrowser: false });
+        expect(parseRuntimeConfig([], { BILI_BRIDGE_NO_OPEN: "1" })).toMatchObject({
+            openBrowser: false,
         });
     });
 

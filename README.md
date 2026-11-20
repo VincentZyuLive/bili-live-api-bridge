@@ -61,10 +61,17 @@ npm start -- --live
 BILI_PROXY_URL=http://127.0.0.1:7890 npm start -- --live
 ```
 
-不传模式参数时默认使用 `--live`。默认访问地址：
+不传模式参数时默认使用 `--live`。启动成功后会打印带 emoji 的服务信息，并自动在默认浏览器打开：
 
 ```text
 http://127.0.0.1:61611
+```
+
+在服务器、自动化脚本或不需要自动打开浏览器时，可以使用：
+
+```bash
+npm start -- --live --no-open
+BILI_BRIDGE_NO_OPEN=1 npm start -- --live
 ```
 
 WebUI 和 API 默认只监听本机。浏览器无法连接本地服务与本地服务无法连接 B 站会显示不同的错误提示。可通过环境变量或参数修改监听地址：
