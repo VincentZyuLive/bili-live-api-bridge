@@ -5,7 +5,7 @@ import {
     loadAreaSearchSettings,
     matchDocumentIds,
     saveAreaSearchSettings,
-} from "./area-search.js";
+} from "./search.js";
 import {
     loadDanmakuSettings,
     normalizeDanmakuSettings,

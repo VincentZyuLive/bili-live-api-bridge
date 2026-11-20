@@ -7,7 +7,7 @@ import {
     loadAreaSearchSettings,
     matchDocumentIds,
     saveAreaSearchSettings,
-} from "../web/area-search.js";
+} from "../web/search.js";
 
 const groups = enrichPartitions(
     [
