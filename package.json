@@ -1,6 +1,6 @@
 {
   "name": "bili-live-api-bridge",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "commonjs",
   "description": "Unofficial Bilibili live streaming API bridge and local WebUI",
@@ -20,6 +20,8 @@
     "@free-fonts/lxgw-wenkai": "1.0.1",
     "axios": "1.20.0",
     "express": "5.3.0",
+    "fuse.js": "7.5.0",
+    "pinyin-pro": "3.29.5",
     "qrcode": "1.5.4",
     "tsx": "4.23.15"
   },

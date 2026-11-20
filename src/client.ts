@@ -2,6 +2,9 @@ import axios, { AxiosInstance, AxiosProxyConfig, AxiosRequestConfig } from "axio
 import crypto from "crypto";
 import qrcode from "qrcode";
 import { URLSearchParams } from "url";
+import { enrichPartitions, type PartitionGroup, type PartitionOptions } from "./partitions";
+
+export type { PartitionArea, PartitionGroup, PartitionOptions, PartitionSearchIndex } from "./partitions";
 
 export interface BiliAuthCredentials {
     SESSDATA: string;
@@ -39,19 +42,6 @@ export interface RoomInfo {
     liveStatus: number;
 }
 
-export interface PartitionArea {
-    id: number;
-    name: string;
-    parentId: number;
-    parentName: string;
-}
-
-export interface PartitionGroup {
-    id: number;
-    name: string;
-    list: Array<{ id: number; name: string }>;
-}
-
 export interface RoomUpdate {
     title?: string;
     areaId?: number;
@@ -67,7 +57,7 @@ export interface StartStreamData {
 export interface LiveClient {
     beginLogin(): Promise<LoginChallenge>;
     pollLogin(challenge: LoginChallenge): Promise<LoginPollResult>;
-    getPartitions(credentials: BiliAuthCredentials): Promise<PartitionGroup[]>;
+    getPartitions(credentials: BiliAuthCredentials, options?: PartitionOptions): Promise<PartitionGroup[]>;
     getRoomInfo(credentials: BiliAuthCredentials, roomId?: string): Promise<RoomInfo>;
     updateRoom(credentials: BiliAuthCredentials, roomId: string, update: RoomUpdate): Promise<void>;
     startStream(
@@ -276,7 +266,10 @@ export class BiliClient implements LiveClient {
         return { code: 0, message: "Login successful", credentials };
     }
 
-    async getPartitions(credentials: BiliAuthCredentials): Promise<PartitionGroup[]> {
+    async getPartitions(
+        credentials: BiliAuthCredentials,
+        options: PartitionOptions = {},
+    ): Promise<PartitionGroup[]> {
         const response = await this.get(URLS.GET_PARTITIONS, {
             headers: { ...BILI_API_HEADERS, Cookie: cookieFor(credentials) },
             params: { show_pinyin: 1 },
@@ -284,7 +277,7 @@ export class BiliClient implements LiveClient {
         if (response.data?.code !== 0) {
             throw operationError(response.data?.code, response.data?.message);
         }
-        return response.data?.data || [];
+        return enrichPartitions(response.data?.data || [], options);
     }
 
     async getRoomInfo(credentials: BiliAuthCredentials, roomId?: string): Promise<RoomInfo> {
@@ -482,10 +475,32 @@ export class BiliClient implements LiveClient {
     }
 }
 
-const MOCK_PARTITIONS: PartitionGroup[] = [
-    { id: 1, name: "娱乐", list: [{ id: 145, name: "颜值" }, { id: 146, name: "户外" }] },
-    { id: 2, name: "音乐", list: [{ id: 236, name: "音乐" }, { id: 237, name: "唱见" }] },
-    { id: 3, name: "知识", list: [{ id: 1017, name: "科学科普" }, { id: 1018, name: "社科人文" }] },
+const MOCK_PARTITIONS = [
+    {
+        id: 1,
+        name: "娱乐",
+        list: [
+            { id: 145, name: "颜值", pinyin: "yanzhi" },
+            { id: 146, name: "户外", pinyin: "huwai" },
+        ],
+    },
+    {
+        id: 2,
+        name: "音乐",
+        list: [
+            { id: 236, name: "音乐", pinyin: "yinyue" },
+            { id: 237, name: "唱见", pinyin: "changjian" },
+        ],
+    },
+    {
+        id: 3,
+        name: "知识",
+        list: [
+            { id: 1017, name: "科学科普", pinyin: "kexuekepu" },
+            { id: 1018, name: "社科人文", pinyin: "shekewenren" },
+            { id: 1019, name: "自习室", pinyin: "zixishi" },
+        ],
+    },
 ];
 
 export class MockBiliClient implements LiveClient {
@@ -523,8 +538,11 @@ export class MockBiliClient implements LiveClient {
         };
     }
 
-    async getPartitions(_credentials: BiliAuthCredentials): Promise<PartitionGroup[]> {
-        return structuredClone(MOCK_PARTITIONS);
+    async getPartitions(
+        _credentials: BiliAuthCredentials,
+        options: PartitionOptions = {},
+    ): Promise<PartitionGroup[]> {
+        return enrichPartitions(structuredClone(MOCK_PARTITIONS), options);
     }
 
     async getRoomInfo(_credentials: BiliAuthCredentials, roomId?: string): Promise<RoomInfo> {

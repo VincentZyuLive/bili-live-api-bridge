@@ -127,6 +127,11 @@ describe("WebUI assets", () => {
         expect(index).toContain('id="danmakuQueueList"');
         expect(index).toContain('id="danmakuAutoRetry"');
         expect(index).toContain('id="roomIdInput"');
+        expect(index).toContain('id="areaSearchInput"');
+        expect(index).toContain('id="areaTagWall"');
+        expect(index).toContain('id="areaPinyinProToggle"');
+        expect(index).toContain('id="areaFuseToggle"');
+        expect(index).not.toContain('id="areaSelect"');
         expect(index).toContain('DANMU SEND');
         expect(index).toContain('class="github-repo-link"');
         expect(index).toContain('https://github.com/VincentZyuLive/bili-live-api-bridge');
@@ -145,6 +150,12 @@ describe("WebUI assets", () => {
         expect(app).toContain("function enqueueDanmaku(event)");
         expect(app).toContain("function processDanmakuQueue()");
         expect(app).toContain("shouldRetryPrefix(");
+        expect(app).toContain("buildPartitionSearchDocuments(");
+        expect(app).toContain("createFuseIndex(");
+
+        const fuseResponse = await fetch(`${baseUrl}/vendor/fuse/fuse.min.mjs`);
+        expect(fuseResponse.status).toBe(200);
+        expect(fuseResponse.headers.get("content-type")).toContain("javascript");
     });
 });
 
@@ -168,6 +179,51 @@ describe("WebUI API", () => {
             mode: "mock",
         });
         expect(JSON.stringify(body)).not.toContain("mock-sessdata");
+    });
+
+    it("returns pinyin-enhanced partitions and supports disabling pinyin-pro", async () => {
+        const baseUrl = await startServer();
+        const cookie = await login(baseUrl);
+
+        const enhancedResponse = await fetch(`${baseUrl}/api/partitions`, {
+            method: "POST",
+            headers: { Cookie: cookie, "Content-Type": "application/json" },
+            body: JSON.stringify({ pinyinPro: true }),
+        });
+        const enhanced = await readJson(enhancedResponse);
+        expect(enhanced.pinyinPro).toBe(true);
+        const knowledge = enhanced.data.find((group: any) => group.name === "知识");
+        const study = knowledge.list.find((area: any) => area.name === "自习室");
+        expect(knowledge.search.enhancedPinyin).toBe("zhishi");
+        expect(knowledge.search.enhancedInitials).toBe("zs");
+        expect(study.search.pinyin).toBe("zixishi");
+        expect(study.search.initials).toBe("zxs");
+
+        const basicResponse = await fetch(`${baseUrl}/api/partitions`, {
+            method: "POST",
+            headers: { Cookie: cookie, "Content-Type": "application/json" },
+            body: JSON.stringify({ pinyinPro: false }),
+        });
+        const basic = await readJson(basicResponse);
+        expect(basic.pinyinPro).toBe(false);
+        const basicStudy = basic.data
+            .find((group: any) => group.name === "知识")
+            .list.find((area: any) => area.name === "自习室");
+        expect(basicStudy.search.pinyin).toBe("zixishi");
+        expect(basicStudy.search.initials).toBe("");
+        expect(basicStudy.search.enhancedPinyin).toBe("");
+    });
+
+    it("validates the pinyinPro switch type", async () => {
+        const baseUrl = await startServer();
+        const cookie = await login(baseUrl);
+        const response = await fetch(`${baseUrl}/api/partitions`, {
+            method: "POST",
+            headers: { Cookie: cookie, "Content-Type": "application/json" },
+            body: JSON.stringify({ pinyinPro: "yes" }),
+        });
+        expect(response.status).toBe(400);
+        expect((await readJson(response)).message).toContain("boolean");
     });
 
     it("issues a long-lived session cookie and refreshes it on session checks", async () => {

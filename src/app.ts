@@ -143,6 +143,14 @@ function optionalTitle(value: unknown): string | undefined {
     return title;
 }
 
+function optionalPinyinPro(value: unknown): boolean {
+    if (value === undefined) return true;
+    if (typeof value !== "boolean") {
+        throw new HttpError(400, "pinyinPro must be a boolean");
+    }
+    return value;
+}
+
 function optionalAreaId(value: unknown): number | undefined {
     if (value === undefined || value === null || value === "") return undefined;
     const areaId = Number(value);
@@ -188,7 +196,7 @@ async function applyRoomUpdate(
 
     const areaId = optionalAreaId(input.partitionId);
     if (areaId !== undefined && areaId !== current.areaId) {
-        const partitions = await client.getPartitions(credentials);
+        const partitions = await client.getPartitions(credentials, { pinyinPro: false });
         const knownArea = partitions.some((group) =>
             group.list.some((area) => Number(area.id) === areaId),
         );
@@ -222,6 +230,7 @@ export function createApp(options: CreateAppOptions) {
     const loginSessions = new Map<string, LoginRecord>();
     const webDir = options.webDir || path.resolve(__dirname, "../web");
     const lxgwFontDir = path.resolve(__dirname, "../node_modules/@free-fonts/lxgw-wenkai");
+    const fuseDistDir = path.resolve(__dirname, "../node_modules/fuse.js/dist");
     const app = express();
 
     app.disable("x-powered-by");
@@ -229,6 +238,10 @@ export function createApp(options: CreateAppOptions) {
     app.use(
         "/vendor/lxgw-wenkai",
         express.static(lxgwFontDir, { immutable: true, maxAge: "1y" }),
+    );
+    app.use(
+        "/vendor/fuse",
+        express.static(fuseDistDir, { immutable: true, maxAge: "1y" }),
     );
     app.use(express.static(webDir, { extensions: ["html"] }));
 
@@ -317,8 +330,9 @@ export function createApp(options: CreateAppOptions) {
         "/api/partitions",
         asyncRoute(async (req, res) => {
             const credentials = requireCredentials(req, sessions);
-            const partitions = await client.getPartitions(credentials);
-            res.json({ code: 0, message: "ok", data: partitions });
+            const pinyinPro = optionalPinyinPro(req.body?.pinyinPro);
+            const partitions = await client.getPartitions(credentials, { pinyinPro });
+            res.json({ code: 0, message: "ok", data: partitions, pinyinPro });
         }),
     );
 

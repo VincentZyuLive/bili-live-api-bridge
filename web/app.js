@@ -1,3 +1,11 @@
+import Fuse from "/vendor/fuse/fuse.min.mjs";
+import {
+    buildPartitionSearchDocuments,
+    createFuseIndex,
+    loadAreaSearchSettings,
+    matchDocumentIds,
+    saveAreaSearchSettings,
+} from "./area-search.js";
 import {
     loadDanmakuSettings,
     normalizeDanmakuSettings,
@@ -22,7 +30,13 @@ const elements = {
     currentTitle: document.querySelector("#currentTitle"),
     refreshButton: document.querySelector("#refreshButton"),
     titleInput: document.querySelector("#titleInput"),
-    areaSelect: document.querySelector("#areaSelect"),
+    areaSearchInput: document.querySelector("#areaSearchInput"),
+    areaSearchCount: document.querySelector("#areaSearchCount"),
+    areaPinyinProToggle: document.querySelector("#areaPinyinProToggle"),
+    areaFuseToggle: document.querySelector("#areaFuseToggle"),
+    areaTagWall: document.querySelector("#areaTagWall"),
+    areaEmpty: document.querySelector("#areaEmpty"),
+    selectedAreaSummary: document.querySelector("#selectedAreaSummary"),
     tagsInput: document.querySelector("#tagsInput"),
     saveTitleButton: document.querySelector("#saveTitleButton"),
     saveAreaButton: document.querySelector("#saveAreaButton"),
@@ -59,6 +73,15 @@ const state = {
     authenticated: false,
     room: null,
     partitionsLoaded: false,
+    partitions: [],
+    selectedAreaId: null,
+    areaSearchSettings: loadAreaSearchSettings(),
+    areaDocuments: [],
+    groupDocuments: [],
+    areaFuseIndex: null,
+    groupFuseIndex: null,
+    areaButtons: new Map(),
+    areaGroups: new Map(),
     pollTimer: null,
     toastTimer: null,
     danmakuComposing: false,
@@ -131,7 +154,20 @@ function showLogin() {
     state.authenticated = false;
     state.room = null;
     state.partitionsLoaded = false;
-    elements.areaSelect.replaceChildren();
+    state.partitions = [];
+    state.selectedAreaId = null;
+    state.areaDocuments = [];
+    state.groupDocuments = [];
+    state.areaFuseIndex = null;
+    state.groupFuseIndex = null;
+    state.areaButtons.clear();
+    state.areaGroups.clear();
+    elements.areaSearchInput.value = "";
+    elements.areaTagWall.replaceChildren();
+    elements.areaEmpty.classList.add("hidden");
+    elements.areaSearchCount.textContent = "0 个分区";
+    elements.selectedAreaSummary.textContent = "尚未加载";
+    elements.saveAreaButton.disabled = true;
     elements.streamPanel.classList.add("hidden");
     elements.loginPanel.classList.remove("hidden");
     elements.consolePanel.classList.add("hidden");
@@ -259,11 +295,14 @@ function renderRoom(room) {
     elements.liveStatus.textContent = liveStatusText(room.liveStatus);
     elements.liveStatus.className = `badge ${room.liveStatus === 1 ? "badge-live" : "badge-muted"}`;
     elements.saveTitleButton.disabled = false;
-    elements.saveAreaButton.disabled = false;
     elements.saveTagsButton.disabled = false;
     updateRoomActionButtons();
     if (roomsPartitionsAvailable()) {
-        elements.areaSelect.value = String(room.areaId);
+        selectArea(room.areaId, { scrollIntoView: true });
+    } else {
+        state.selectedAreaId = room.areaId;
+        elements.selectedAreaSummary.textContent = `${room.parentAreaName || "分区"} / ${room.areaName || room.areaId}`;
+        elements.saveAreaButton.disabled = true;
     }
 }
 
@@ -502,27 +541,167 @@ function enqueueDanmaku(event) {
     window.requestAnimationFrame(() => void processDanmakuQueue());
 }
 
-function roomsPartitionsAvailable() {
-    return elements.areaSelect.options.length > 0;
+function applyAreaSearchSettings() {
+    elements.areaPinyinProToggle.checked = state.areaSearchSettings.pinyinPro;
+    elements.areaFuseToggle.checked = state.areaSearchSettings.fuse;
 }
 
-async function loadPartitions() {
-    if (state.partitionsLoaded) return;
-    const result = await request("/api/partitions", { method: "POST", body: {} });
-    elements.areaSelect.replaceChildren();
-    for (const group of result.data || []) {
-        const optgroup = document.createElement("optgroup");
-        optgroup.label = group.name;
-        for (const area of group.list || []) {
-            const option = document.createElement("option");
-            option.value = String(area.id);
-            option.textContent = area.name;
-            optgroup.append(option);
+function rebuildPartitionSearchIndex() {
+    const { groupDocuments, areaDocuments } = buildPartitionSearchDocuments(
+        state.partitions,
+        state.areaSearchSettings.pinyinPro,
+    );
+    state.groupDocuments = groupDocuments;
+    state.areaDocuments = areaDocuments;
+    state.groupFuseIndex = state.areaSearchSettings.fuse ? createFuseIndex(groupDocuments, Fuse) : null;
+    state.areaFuseIndex = state.areaSearchSettings.fuse ? createFuseIndex(areaDocuments, Fuse) : null;
+}
+
+function updateAreaSaveButton() {
+    elements.saveAreaButton.disabled = !state.room
+        || !state.selectedAreaId
+        || Number(state.selectedAreaId) === Number(state.room.areaId);
+}
+
+function selectArea(areaId, options = {}) {
+    const selectedId = Number(areaId);
+    if (!Number.isInteger(selectedId) || selectedId <= 0) return;
+
+    let selectedArea = null;
+    let selectedGroup = null;
+    for (const group of state.partitions) {
+        const area = (group.list || []).find((item) => Number(item.id) === selectedId);
+        if (area) {
+            selectedArea = area;
+            selectedGroup = group;
+            break;
         }
-        elements.areaSelect.append(optgroup);
     }
+    if (!selectedArea || !selectedGroup) return;
+
+    state.selectedAreaId = selectedId;
+    for (const [id, button] of state.areaButtons) {
+        const selected = id === selectedId;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
+    }
+    elements.selectedAreaSummary.textContent = `${selectedGroup.name} / ${selectedArea.name}`;
+    updateAreaSaveButton();
+
+    if (options.scrollIntoView) {
+        window.setTimeout(() => {
+            state.areaButtons.get(selectedId)?.scrollIntoView({ block: "nearest" });
+        }, 60);
+    }
+}
+
+function filterAreaTags() {
+    const query = elements.areaSearchInput.value.trim();
+    const hasQuery = Boolean(query);
+    const total = state.areaDocuments.length;
+    let visibleCount = 0;
+
+    const areaMatches = hasQuery
+        ? matchDocumentIds(state.areaDocuments, query, {
+              fuse: state.areaSearchSettings.fuse,
+              fuseIndex: state.areaFuseIndex,
+          })
+        : new Set();
+    let groupMatches = hasQuery
+        ? matchDocumentIds(state.groupDocuments, query)
+        : new Set();
+    if (
+        hasQuery
+        && state.areaSearchSettings.fuse
+        && areaMatches.size === 0
+        && state.groupFuseIndex
+    ) {
+        groupMatches = matchDocumentIds(state.groupDocuments, query, {
+            fuse: true,
+            fuseIndex: state.groupFuseIndex,
+        });
+    }
+
+    for (const group of state.partitions) {
+        const groupSection = state.areaGroups.get(Number(group.id));
+        let groupVisibleCount = 0;
+        const groupMatched = hasQuery && groupMatches.has(Number(group.id));
+        for (const area of group.list || []) {
+            const button = state.areaButtons.get(Number(area.id));
+            if (!button) continue;
+            const visible = !hasQuery || groupMatched || areaMatches.has(Number(area.id));
+            button.hidden = !visible;
+            if (visible) {
+                groupVisibleCount += 1;
+                visibleCount += 1;
+            }
+        }
+        if (groupSection) groupSection.hidden = groupVisibleCount === 0;
+    }
+
+    elements.areaSearchCount.textContent = hasQuery
+        ? `${visibleCount} / ${total} 个分区`
+        : `${total} 个分区`;
+    elements.areaEmpty.textContent = hasQuery ? "没有匹配的直播分区" : "分区列表尚未加载";
+    elements.areaEmpty.classList.toggle("hidden", visibleCount > 0);
+}
+
+function renderPartitionTags() {
+    elements.areaTagWall.replaceChildren();
+    state.areaButtons.clear();
+    state.areaGroups.clear();
+
+    for (const group of state.partitions) {
+        const section = document.createElement("section");
+        section.className = "area-group";
+        section.dataset.groupId = String(group.id);
+
+        const heading = document.createElement("div");
+        heading.className = "area-group-heading";
+        const title = document.createElement("h4");
+        title.textContent = group.name;
+        const count = document.createElement("span");
+        count.textContent = String((group.list || []).length);
+        heading.append(title, count);
+
+        const tags = document.createElement("div");
+        tags.className = "area-tag-list";
+        for (const area of group.list || []) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "area-tag";
+            button.dataset.areaId = String(area.id);
+            button.textContent = area.name;
+            button.title = `${group.name} / ${area.name}`;
+            button.setAttribute("aria-pressed", "false");
+            button.addEventListener("click", () => selectArea(area.id));
+            state.areaButtons.set(Number(area.id), button);
+            tags.append(button);
+        }
+
+        section.append(heading, tags);
+        state.areaGroups.set(Number(group.id), section);
+        elements.areaTagWall.append(section);
+    }
+
+    rebuildPartitionSearchIndex();
+    filterAreaTags();
+}
+
+function roomsPartitionsAvailable() {
+    return state.partitions.length > 0;
+}
+
+async function loadPartitions(force = false) {
+    if (state.partitionsLoaded && !force) return;
+    const result = await request("/api/partitions", {
+        method: "POST",
+        body: { pinyinPro: state.areaSearchSettings.pinyinPro },
+    });
+    state.partitions = Array.isArray(result.data) ? result.data : [];
     state.partitionsLoaded = true;
-    if (state.room) elements.areaSelect.value = String(state.room.areaId);
+    renderPartitionTags();
+    if (state.room) selectArea(state.room.areaId, { scrollIntoView: true });
 }
 
 async function loadRoom() {
@@ -548,7 +727,13 @@ async function enterConsole() {
 async function saveField(field) {
     const body = { roomId: currentRoomId() || undefined };
     if (field === "title") body.title = elements.titleInput.value;
-    if (field === "area") body.partitionId = Number(elements.areaSelect.value);
+    if (field === "area") {
+        if (!state.selectedAreaId) {
+            setStatus(elements.actionStatus, "请先选择一个直播分区", "error");
+            return;
+        }
+        body.partitionId = state.selectedAreaId;
+    }
     if (field === "tags") {
         body.tags = elements.tagsInput.value.split(",").map((tag) => tag.trim()).filter(Boolean);
     }
@@ -589,7 +774,7 @@ function showFaceAuth(error) {
 async function startStream() {
     const body = {
         roomId: currentRoomId() || undefined,
-        partitionId: Number(elements.areaSelect.value),
+        partitionId: state.selectedAreaId,
         title: elements.titleInput.value,
         tags: elements.tagsInput.value.split(",").map((tag) => tag.trim()).filter(Boolean),
     };
@@ -659,6 +844,7 @@ async function copyValue(id) {
 }
 
 async function init() {
+    applyAreaSearchSettings();
     applyDanmakuSettings();
     updateDanmakuControls();
     renderDanmakuRecords();
@@ -679,6 +865,31 @@ async function init() {
 
 elements.loginButton.addEventListener("click", login);
 elements.refreshButton.addEventListener("click", () => enterConsole());
+elements.areaSearchInput.addEventListener("input", filterAreaTags);
+elements.areaFuseToggle.addEventListener("change", () => {
+    state.areaSearchSettings = saveAreaSearchSettings({
+        ...state.areaSearchSettings,
+        fuse: elements.areaFuseToggle.checked,
+    });
+    rebuildPartitionSearchIndex();
+    filterAreaTags();
+});
+elements.areaPinyinProToggle.addEventListener("change", async () => {
+    state.areaSearchSettings = saveAreaSearchSettings({
+        ...state.areaSearchSettings,
+        pinyinPro: elements.areaPinyinProToggle.checked,
+    });
+    elements.areaPinyinProToggle.disabled = true;
+    setStatus(elements.actionStatus, "正在重建分区拼音索引...");
+    try {
+        await loadPartitions(true);
+        setStatus(elements.actionStatus, "分区拼音索引已更新", "success");
+    } catch (error) {
+        setStatus(elements.actionStatus, formatRequestError(error), "error");
+    } finally {
+        elements.areaPinyinProToggle.disabled = false;
+    }
+});
 elements.saveTitleButton.addEventListener("click", () => saveField("title"));
 elements.saveAreaButton.addEventListener("click", () => saveField("area"));
 elements.saveTagsButton.addEventListener("click", () => saveField("tags"));

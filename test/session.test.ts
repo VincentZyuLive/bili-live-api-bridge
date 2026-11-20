@@ -34,8 +34,10 @@ describe("SessionStore persistence", () => {
         const first = new SessionStore({ persistPath });
         const id = first.create(credentials);
 
-        const mode = fs.statSync(persistPath).mode & 0o777;
-        expect(mode).toBe(0o600);
+        if (process.platform !== "win32") {
+            const mode = fs.statSync(persistPath).mode & 0o777;
+            expect(mode).toBe(0o600);
+        }
 
         const restarted = new SessionStore({ persistPath });
         expect(restarted.get(id)).toEqual(credentials);

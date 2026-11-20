@@ -80,13 +80,32 @@
                             </div>
                         </label>
 
-                        <label class="field">
-                            <span>分区</span>
-                            <div class="field-row">
-                                <select id="areaSelect"></select>
+                        <div class="field area-field">
+                            <div class="area-field-head">
+                                <div class="area-field-title">
+                                    <span>分区</span>
+                                    <small id="selectedAreaSummary" class="area-selected-summary">尚未加载</small>
+                                </div>
                                 <button id="saveAreaButton" class="button button-secondary" type="button" disabled>更新</button>
                             </div>
-                        </label>
+                            <div class="area-search-row">
+                                <input id="areaSearchInput" type="search" autocomplete="off" placeholder="搜索：自习室 / zixishi / zxs" aria-label="搜索直播分区" />
+                                <span id="areaSearchCount" class="area-search-count">0 个分区</span>
+                            </div>
+                            <div class="area-search-options">
+                                <label class="area-search-toggle">
+                                    <input id="areaPinyinProToggle" type="checkbox" checked />
+                                    <span>拼音增强</span>
+                                </label>
+                                <label class="area-search-toggle">
+                                    <input id="areaFuseToggle" type="checkbox" checked />
+                                    <span>模糊搜索</span>
+                                </label>
+                                <small class="hint">拼音增强会补全分组与缩写；模糊搜索支持错字和跳字匹配。</small>
+                            </div>
+                            <div id="areaTagWall" class="area-tag-wall" aria-live="polite"></div>
+                            <p id="areaEmpty" class="area-empty hidden">没有匹配的直播分区</p>
+                        </div>
 
                         <label class="field">
                             <span>直播标签</span>
