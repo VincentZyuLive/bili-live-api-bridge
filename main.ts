@@ -26,7 +26,7 @@ function main(): void {
     }
 
     const sessions = config.mode === "live"
-        ? new SessionStore({ persistPath: path.resolve(__dirname, "cookie", "sessions.json") })
+        ? new SessionStore({ persistPath: path.resolve(__dirname, "cache", "cookie", "sessions.json") })
         : new SessionStore();
     const app = createApp({ client, mode: config.mode, sessions });
     const server = app.listen(config.port, config.host, () => {

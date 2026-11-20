@@ -18,7 +18,7 @@ const credentials: BiliAuthCredentials = {
 function tempSessionPath(): string {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bili-session-store-"));
     tempDirs.push(dir);
-    return path.join(dir, "cookie", "sessions.json");
+    return path.join(dir, "cache", "cookie", "sessions.json");
 }
 
 afterEach(() => {

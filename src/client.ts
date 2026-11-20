@@ -94,7 +94,7 @@ export class BiliApiError extends Error {
 }
 
 const APP_KEY = "aae92bc66f3edfab";
-const APP_SECRET = "af125a0d5279fd576c1b4418a3e8276d";
+const APP_SECRET = "af125a0d5279fd576c1b4418a3e8276d"; // gitleaks:allow - public Bilibili web-client signing secret, not a user credential
 const AUTH_ERROR_CODES = new Set([60024, 60043]);
 const FACE_AUTH_URL = "https://live.bilibili.com/p/html/bilili-page-face-auth/index.html";
 const REQUEST_TIMEOUT_MS = 10_000;

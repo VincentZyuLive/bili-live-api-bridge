@@ -1,0 +1,2 @@
+# Historical copy of the public Bilibili web-client signing secret, not a user credential.
+0031febe5d4c44e76b50bf97c955841bfea8c523:src/bili-client.ts:generic-api-key:93

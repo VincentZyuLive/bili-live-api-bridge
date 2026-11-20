@@ -1,4 +1,6 @@
-# Local credentials produced by the sample application
+# Local credentials and runtime cache
+cache/
+# Legacy credential directory kept ignored after migration to cache/cookie/
 cookie/
 
 # Runtime and local configuration
