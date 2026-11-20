@@ -401,6 +401,11 @@ h2 {
     box-shadow: 0 0 0 4px rgba(251, 114, 153, 0.11);
 }
 
+.version-badge {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+}
+
 .area-field {
     gap: 12px;
 }
@@ -507,6 +512,10 @@ h2 {
 .area-group {
     display: grid;
     gap: 8px;
+}
+
+.area-group[hidden] {
+    display: none;
 }
 
 .area-group-heading {

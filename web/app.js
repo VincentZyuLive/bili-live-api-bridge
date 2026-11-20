@@ -18,6 +18,7 @@ import {
 
 const elements = {
     modeBadge: document.querySelector("#modeBadge"),
+    versionBadge: document.querySelector("#versionBadge"),
     logoutButton: document.querySelector("#logoutButton"),
     loginPanel: document.querySelector("#loginPanel"),
     consolePanel: document.querySelector("#consolePanel"),
@@ -850,6 +851,7 @@ async function init() {
     renderDanmakuRecords();
     try {
         const health = await request("/api/health");
+        if (health.version) elements.versionBadge.textContent = `v${health.version}`;
         setMode(health.mode);
         const session = await request("/api/auth/session");
         if (session.authenticated) {

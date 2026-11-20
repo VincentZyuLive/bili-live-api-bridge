@@ -1,3 +1,4 @@
+import packageInfo from "../package.json";
 import axios from "axios";
 import crypto from "crypto";
 import express, { NextFunction, Request, Response } from "express";
@@ -248,6 +249,7 @@ export function createApp(options: CreateAppOptions) {
     app.get("/api/health", (_req, res) => {
         res.json({
             ok: true,
+            version: packageInfo.version,
             mode,
             port: Number(process.env.PORT || 61611),
             upstreamProxy: process.env.BILI_PROXY_URL ? "configured" : "direct",

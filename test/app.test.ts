@@ -1,3 +1,4 @@
+import packageInfo from "../package.json";
 import { once } from "events";
 import type { Server } from "http";
 import type { AddressInfo } from "net";
@@ -137,6 +138,7 @@ describe("WebUI assets", () => {
         expect(index).toContain('id="areaTagWall"');
         expect(index).toContain('id="areaPinyinProToggle"');
         expect(index).toContain('id="areaFuseToggle"');
+        expect(index).toContain('id="versionBadge"');
         expect(index).not.toContain('id="areaSelect"');
         expect(index).toContain('DANMU SEND');
         expect(index).toContain('class="github-repo-link"');
@@ -166,6 +168,13 @@ describe("WebUI assets", () => {
 });
 
 describe("WebUI API", () => {
+    it("reports the current package version in health checks", async () => {
+        const baseUrl = await startServer();
+        const response = await fetch(`${baseUrl}/api/health`);
+        expect(response.status).toBe(200);
+        expect((await readJson(response)).version).toBe(packageInfo.version);
+    });
+
     it("requires authentication", async () => {
         const baseUrl = await startServer();
         const response = await fetch(`${baseUrl}/api/room/info`, { method: "POST" });
