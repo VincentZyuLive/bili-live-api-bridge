@@ -520,6 +520,7 @@ h2 {
 
 .area-tag-wall {
     display: grid;
+    align-content: start;
     gap: 14px;
     max-height: 360px;
     overflow-y: auto;
@@ -532,6 +533,7 @@ h2 {
 
 .area-group {
     display: grid;
+    align-content: start;
     gap: 8px;
 }
 
@@ -562,11 +564,14 @@ h2 {
 
 .area-tag-list {
     display: flex;
+    align-content: flex-start;
+    align-items: flex-start;
     gap: 7px;
     flex-wrap: wrap;
 }
 
 .area-tag {
+    height: fit-content;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 999px;
     padding: 6px 10px;
