@@ -882,6 +882,15 @@ async function startStream() {
         await loadRoom();
     } catch (error) {
         setStatus(elements.actionStatus, formatRequestError(error), "error");
+        if (Number(error.code) === 60002) {
+            const link = document.createElement("a");
+            link.href = "https://link.bilibili.com/#/my-room/violation-records";
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.textContent = "查看直播间违规记录 ↗";
+            link.className = "status-link";
+            elements.actionStatus.append(document.createElement("br"), link);
+        }
         showToast(formatRequestError(error), "error");
         if (error.stage === "face_auth" || [60024, 60043].includes(Number(error.code))) {
             showFaceAuth(error);

@@ -317,6 +317,15 @@ h2 {
     color: #ff8c97;
 }
 
+.status-link {
+    color: #8ecbff;
+    text-decoration: underline;
+}
+
+.status-link:hover {
+    color: #c2e3ff;
+}
+
 .status-line.success {
     color: var(--success);
 }
