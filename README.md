@@ -84,6 +84,26 @@ http://127.0.0.1:61611
 npm start -- --mock
 ```
 
+### 🖥️ 启动脚本
+
+Windows 双击 `scripts/start-bili-bridge.cmd`，Linux/macOS 使用：
+
+```bash
+./scripts/start-bili-bridge.sh
+```
+
+脚本会先检查服务是否已经运行；已运行时只打开 WebUI，未运行时通过 `npm start` 启动。首次运行若缺少 `node_modules` 会自动执行 `npm ci`。启动参数会原样传透：
+
+```powershell
+.\scripts\start-bili-bridge.cmd --mock --port 62000
+```
+
+```bash
+./scripts/start-bili-bridge.sh --live --port 62000
+```
+
+Windows 桌面快捷方式可运行 `scripts\create-desktop-shortcut.cmd` 生成，名称为 `Bili Live Bridge`；图标由网站 favicon 与 VincentZyu233 的 GitHub 头像组合而成。关闭终端或控制台窗口即可停止服务。
+
 ## 🧭 使用流程
 
 1. 启动服务并打开 WebUI。

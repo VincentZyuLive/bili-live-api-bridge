@@ -1,2 +1,7 @@
 # Include this README in GitHub language statistics.
 README.md linguist-detectable -linguist-documentation
+
+# Keep Windows launchers as CRLF and shell launchers as LF.
+*.cmd text eol=crlf
+*.sh text eol=lf
+*.ico binary
